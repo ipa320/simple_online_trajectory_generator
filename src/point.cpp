@@ -2,9 +2,13 @@
 
 using namespace SOTG;
 
-Point::Point() { }
+Point::Point(Eigen::VectorXd& vec)
+{
+    for (Eigen::Index i = 0; i < vec.size(); ++i) {
+        addValue(vec[i]);
+    }
+}
 
-// should be in pitasc glue
 Point::Point(std::vector<Eigen::VectorXd> vec_list)
 {
     for (auto& vec : vec_list)

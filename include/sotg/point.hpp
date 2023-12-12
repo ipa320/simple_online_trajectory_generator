@@ -22,6 +22,7 @@ private:
 public:
     Point();
     Point(std::vector<Eigen::VectorXd> vec_list);
+    Point(Eigen::VectorXd& vec);
 
     void addValue(double value) { values_.push_back(value); };
     void setOrientationIndex(int new_index) { orientation_index_ = new_index; };

@@ -22,7 +22,7 @@ include_directories(
   include
 )
 
-add_library(${PROJECT_NAME}
+add_library(${PROJECT_NAME} SHARED
   src/trajectory_generator.cpp
   src/constant_acceleration_solver.cpp
   src/path_manager.cpp
@@ -42,6 +42,5 @@ target_link_libraries (${PROJECT_NAME} Eigen3::Eigen)
   ## Debug ##
   ###########
 
-set(CMAKE_BUILD_TYPE Debug)
-add_definitions(-DDEBUG) #uncomment for additional debug output
-add_definitions(-DVERBOSE_TESTS) # print all calculated values
+#add_definitions(-DDEBUG) #uncomment for additional debug output
+#add_definitions(-DVERBOSE_TESTS) # print all calculated values
