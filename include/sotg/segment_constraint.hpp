@@ -9,7 +9,7 @@ private:
 
 public:
     SegmentConstraint();
-    SegmentConstraint(double blend_dist);
+    explicit SegmentConstraint(double blend_dist);
 
     double getBlendDistance() const { return blending_distance_; }
 };

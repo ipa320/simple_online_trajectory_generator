@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <vector>
 
 #include "sotg/phase.hpp"
@@ -48,8 +49,8 @@ namespace detail {
         const Point& getDirection() const { return dir_; }
         const Point& getDifference() const { return diff_; }
         void setLength(double length) { length_ = length; }
-        void setDirection(Point dir) { dir_ = dir; }
-        void setDifference(Point diff) { diff_ = diff; }
+        void setDirection(const Point& dir) { dir_ = dir; }
+        void setDifference(const Point& diff) { diff_ = diff; }
 
         Section(Point& p_start_ref, Point& p_end_ref, SectionConstraint constraint_copy, size_t section_id);
 
@@ -62,17 +63,17 @@ namespace detail {
 
         const std::vector<double>& getAdaptedAcceleration() const { return adapted_acceleration_; }
         const std::vector<double>& getAdaptedVelocity() const { return adapted_velocity_; }
-        void setAdaptedAcceleration(std::vector<double> new_adapted_acceleration)
+        void setAdaptedAcceleration(const std::vector<double>& new_adapted_acceleration)
         {
             adapted_acceleration_ = new_adapted_acceleration;
         }
-        void setAdaptedVelocity(std::vector<double> new_adapted_velocity)
+        void setAdaptedVelocity(const std::vector<double>& new_adapted_velocity)
         {
             adapted_velocity_ = new_adapted_velocity;
         }
 
         const Phase& getPhaseByTime(double time) const;
-        void setPhases(std::vector<Phase> new_phases) { phases_ = new_phases; }
+        void setPhases(const std::vector<Phase>& new_phases) { phases_ = new_phases; }
         const std::vector<Phase>& getPhases() const { return phases_; }
 
         double getStartTime() const { return start_time_; }

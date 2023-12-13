@@ -122,7 +122,7 @@ void ConstantAccelerationSolver::calcPhaseTimeAndDistance(double& a_max, double&
 
     dec_phase_single_dof.distance_p_start = L_acc + L_coast;
 
-    if (L_coast < 0.0 && !(std::abs(L_coast < 1e-4))) {
+    if (L_coast < 0.0 && !(std::abs(L_coast) < 1e-4)) {
         std::cout << "Warning::KinematicSolver: velocity should not be decreased in this step!" << std::endl;
     }
 }
@@ -236,23 +236,26 @@ void ConstantAccelerationSolver::calcTimesAndLengthsMultiDoF(Phase& acc_phase, P
     }
 
     // Find the first component duration that is not 0.0 because all of them have the same value or 0.0
-    for (auto& component : acc_phase.components)
-        if (!utility::nearlyZero(component.duration)) {
-            acc_phase.duration = component.duration;
-            break;
-        }
+    auto it_acc
+        = std::find_if(acc_phase.components.begin(), acc_phase.components.end(),
+                       [](const PhaseDoF& phase_dof) { return !(utility::nearlyZero(phase_dof.duration)); });
+    if (it_acc != acc_phase.components.end()) {
+        acc_phase.duration = it_acc->duration;
+    }
 
-    for (auto& component : coast_phase.components)
-        if (!utility::nearlyZero(component.duration)) {
-            coast_phase.duration = component.duration;
-            break;
-        }
+    auto it_coast
+        = std::find_if(coast_phase.components.begin(), coast_phase.components.end(),
+                       [](const PhaseDoF& phase_dof) { return !(utility::nearlyZero(phase_dof.duration)); });
+    if (it_coast != coast_phase.components.end()) {
+        coast_phase.duration = it_coast->duration;
+    }
 
-    for (auto& component : dec_phase.components)
-        if (!utility::nearlyZero(component.duration)) {
-            dec_phase.duration = component.duration;
-            break;
-        }
+    auto it_dec
+        = std::find_if(dec_phase.components.begin(), dec_phase.components.end(),
+                       [](const PhaseDoF& phase_dof) { return !(utility::nearlyZero(phase_dof.duration)); });
+    if (it_dec != dec_phase.components.end()) {
+        dec_phase.duration = it_dec->duration;
+    }
 }
 
 Section ConstantAccelerationSolver::calcSection(Point& p_start_ref, Point& p_end_ref,
@@ -616,7 +619,7 @@ void ConstantAccelerationSolver::calcPosAndVelSingleDoFLinear(double section_dof
     } else if (phase.type == PhaseType::ConstantVelocity) {
         p_i = v_max_reduced * t_phase + phase_distance_to_p_start;
         v_i = v_max_reduced;
-    } else if (phase.type == PhaseType::ConstantDeacceleration) {
+    } else {  // deacceleration
         p_i = -0.5 * a_max_reduced * std::pow(t_phase, 2) + v_max_reduced * t_phase + phase_distance_to_p_start;
         v_i = -a_max_reduced * t_phase + v_max_reduced;
     }
@@ -624,8 +627,8 @@ void ConstantAccelerationSolver::calcPosAndVelSingleDoFLinear(double section_dof
         pos = 0;
     } else {
         pos = p_i / section_dof_length;
+        vel = v_i;
     }
-    vel = v_i;
 }
 
 void ConstantAccelerationSolver::calcVelAndTimeByDistance(const Section& section, double distance,
@@ -703,7 +706,6 @@ void ConstantAccelerationSolver::calcPosAndVelBlendSegment(double t_segment, con
     double duration = segment.getDuration();
 
     Point A_blend = segment.getStartPoint();
-    Point C_blend = segment.getEndPoint();
     double vel_blend_pre_magnitude = segment.getPreBlendVelocityMagnitude();
     double vel_blend_post_magnitude = segment.getPostBlendVelocityMagnitude();
 
@@ -723,13 +725,6 @@ void ConstantAccelerationSolver::calcPosAndVelSection(double t_section, const Se
     Point p_start = section.getStartPoint();
     Point p_end = section.getEndPoint();
     Point diff = p_end - p_start;
-    double total_length = diff.norm();
-
-    Point dir;
-    if (utility::nearlyZero(total_length))
-        dir.zeros(p_start.size());
-    else
-        dir = diff / total_length;
 
     const std::vector<double>& a_max_vec = section.getAdaptedAcceleration();
     const std::vector<double>& v_max_vec = section.getAdaptedVelocity();

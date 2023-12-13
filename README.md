@@ -1,6 +1,6 @@
 [![url](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-# SOTG - Simple Online Trajectory Genrator
+# SOTG - Simple Online Trajectory Generator
 Generate trajectories in realtime across multiple via points, constrained by velocity, acceleration and maximum path deviation.
 
 

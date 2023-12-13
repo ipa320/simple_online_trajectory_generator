@@ -13,7 +13,8 @@
 
 namespace SOTG {
 
-// Wraps std::vector and allows vector arithmetic, stores information about the unit of a particular value
+// Wraps std::vector and allows vector arithmetic, stores information about the
+// unit of a particular value
 class Point {
 private:
     std::vector<double> values_;
@@ -21,8 +22,7 @@ private:
 
 public:
     Point();
-    Point(std::vector<Eigen::VectorXd> vec_list);
-    Point(Eigen::VectorXd& vec);
+    explicit Point(std::vector<Eigen::VectorXd> vec_list);
 
     void addValue(double value) { values_.push_back(value); };
     void setOrientationIndex(int new_index) { orientation_index_ = new_index; };

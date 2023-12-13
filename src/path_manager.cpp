@@ -157,7 +157,7 @@ std::ostream& PathManager::operator<<(std::ostream& out)
 
     if (!sections_.empty()) {
         std::list<Section>::iterator it;
-        for (it = sections_.begin(); it != std::prev(sections_.end()); it++) {
+        for (it = sections_.begin(); it != std::prev(sections_.end()); ++it) {
             out << it->getStartPoint() << ", ";
         }
         out << sections_.back().getStartPoint() << " ]";

@@ -39,13 +39,14 @@ const Phase& Section::getPhaseByTime(double time) const
 
 const Phase& Section::getPhaseByType(PhaseType type) const
 {
-    for (auto& phase : phases_) {
-        if (type == phase.type) {
-            return phase;
-        }
+    auto it = std::find_if(phases_.begin(), phases_.end(), [&](const Phase& phase) { return type == phase.type; });
+
+    if (it != phases_.end()) {
+        return *it;
+    } else {
+        throw std::runtime_error("In section Nr." + std::to_string(id_) + " a phase of type: " + ToString(type)
+                                 + " was requested, but isn't available.");
     }
-    throw std::runtime_error("In section Nr." + std::to_string(id_) + " a phase of type: " + ToString(type)
-                             + " was requested, but isn't available.");
 }
 
 const Phase& Section::getPhaseByDistance(double distance) const

@@ -16,8 +16,9 @@
 namespace SOTG {
 namespace detail {
 
-    // Implements the logic for section and segment generation aswell as the calculation of positions and
-    // velocities for specific points in time using a bang coast bang profile
+    // Implements the logic for section and segment generation aswell as the
+    // calculation of positions and velocities for specific points in time using a
+    // bang coast bang profile
     class ConstantAccelerationSolver : public KinematicSolver {
     private:
         void calcSegmentPreparations(const Section& pre_section, const Section& post_section,

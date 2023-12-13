@@ -12,13 +12,20 @@ namespace detail {
     // between the two.
     class Segment {
     protected:
-        int id_;
+        Segment(double duration, double t_start)
+            : duration_(duration)
+            , start_time_(t_start)
+            , id_(-1)
+        {
+        }
 
         double duration_;
         double start_time_;
 
         Point start_point_;
         Point end_point_;
+
+        int id_;
 
     public:
         virtual void calcPosAndVel([[maybe_unused]] double t_section, [[maybe_unused]] double t_segment,
@@ -27,8 +34,8 @@ namespace detail {
         void setDuration(double duration) { duration_ = duration; }
         void setStartTime(double t_start) { start_time_ = t_start; }
 
-        void setStartPoint(Point p) { start_point_ = p; }
-        void setEndPoint(Point p) { end_point_ = p; }
+        void setStartPoint(const Point& p) { start_point_ = p; }
+        void setEndPoint(const Point& p) { end_point_ = p; }
 
         void setID(int num) { id_ = num; }
 

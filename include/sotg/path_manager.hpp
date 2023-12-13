@@ -16,7 +16,8 @@
 namespace SOTG {
 namespace detail {
 
-    // Stores and maintains the input path aswell as all generated sections and segments
+    // Stores and maintains the input path aswell as all generated sections and
+    // segments
     class PathManager {
     private:
         Path path_;

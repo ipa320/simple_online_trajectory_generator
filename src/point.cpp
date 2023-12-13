@@ -2,12 +2,7 @@
 
 using namespace SOTG;
 
-Point::Point(Eigen::VectorXd& vec)
-{
-    for (Eigen::Index i = 0; i < vec.size(); ++i) {
-        addValue(vec[i]);
-    }
-}
+Point::Point() { }
 
 Point::Point(std::vector<Eigen::VectorXd> vec_list)
 {

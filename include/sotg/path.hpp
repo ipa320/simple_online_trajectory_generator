@@ -10,7 +10,8 @@
 
 namespace SOTG {
 
-// A collection of points used as an input to the trajectory generator to quickly setup many new waypoints
+// A collection of points used as an input to the trajectory generator to
+// quickly setup many new waypoints
 class Path {
 private:
     std::vector<Point> waypoints_;

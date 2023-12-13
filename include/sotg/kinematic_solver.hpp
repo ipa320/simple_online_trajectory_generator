@@ -10,8 +10,9 @@
 
 namespace SOTG {
 namespace detail {
-    // Derived classes of this base class implement the logic for section and segment generation aswell as the
-    // calculation of position and velocity for a specific point in time
+    // Derived classes of this base class implement the logic for section and
+    // segment generation aswell as the calculation of position and velocity for a
+    // specific point in time
     class KinematicSolver {
     public:
         virtual Section calcSection(Point& p_start_ref, Point& p_end_ref, SectionConstraint constraint_copy,
