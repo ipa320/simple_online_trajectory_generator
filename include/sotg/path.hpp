@@ -14,17 +14,17 @@ namespace SOTG {
 // quickly setup many new waypoints
 class Path {
 private:
-    std::vector<Point> waypoints_;
+    std::vector<Frame> waypoints_;
 
 public:
-    void addPoint(Point point);
+    void addPoint(Frame point);
     void addPoint(const std::vector<Eigen::VectorXd>& old_point);
     void addPoint(const std::vector<std::vector<double>>& old_point);
     size_t getNumWaypoints() { return waypoints_.size(); };
-    Point& getPoint(size_t index);
+    Frame& getPoint(size_t index);
 
-    std::vector<Point>::iterator begin() { return waypoints_.begin(); }
-    std::vector<Point>::iterator end() { return waypoints_.end(); }
+    std::vector<Frame>::iterator begin() { return waypoints_.begin(); }
+    std::vector<Frame>::iterator end() { return waypoints_.end(); }
 
     std::ostream& operator<<(std::ostream& out);
 };

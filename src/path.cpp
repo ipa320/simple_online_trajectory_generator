@@ -4,12 +4,12 @@
 
 using namespace SOTG;
 
-void Path::addPoint(Point point) { waypoints_.push_back(point); }
+void Path::addPoint(Frame point) { waypoints_.push_back(point); }
 
 // should be in pitasc glue
 void Path::addPoint(const std::vector<Eigen::VectorXd>& old_point)
 {
-    Point new_point;
+    Frame new_point;
     // Expecting xyz, abc
     Eigen::VectorXd linear_point = old_point.front();
     Eigen::VectorXd angular_point = old_point.back();
@@ -27,7 +27,7 @@ void Path::addPoint(const std::vector<Eigen::VectorXd>& old_point)
 
 void Path::addPoint(const std::vector<std::vector<double>>& old_point)
 {
-    Point new_point;
+    Frame new_point;
 
     std::vector<double> linear_point = old_point.front();
     std::vector<double> angular_point = old_point.back();
@@ -43,7 +43,7 @@ void Path::addPoint(const std::vector<std::vector<double>>& old_point)
     waypoints_.push_back(new_point);
 }
 
-Point& Path::getPoint(size_t index)
+Frame& Path::getPoint(size_t index)
 {
     if (index > waypoints_.size() - 1) {
         throw std::runtime_error("Index out of bounds, trying to access " + std::to_string(index)

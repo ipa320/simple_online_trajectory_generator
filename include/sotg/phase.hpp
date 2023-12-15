@@ -27,7 +27,8 @@ namespace detail {
     struct PhaseDoF {
         double duration = 0.0;
         double length = 0.0;
-        double distance_p_start = 0.0;
+        double distance_start = 0.0;
+        double angular_distance_start = 0.0;
     };
 
     // A specific kinematic state that applies to a specific part of a section
@@ -38,7 +39,7 @@ namespace detail {
         double length = 0.0;
 
         double t_start = 0.0;
-        double distance_p_start = 0.0;
+        double distance_start = 0.0;
 
         PhaseType type;
     };

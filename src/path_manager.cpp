@@ -151,22 +151,22 @@ void PathManager::resetPath(Path new_path, std::vector<SectionConstraint> new_se
     resetSegments();
 }
 
-std::ostream& PathManager::operator<<(std::ostream& out)
-{
-    out << "[ ";
+// std::ostream& PathManager::operator<<(std::ostream& out)
+// {
+//     out << "[ ";
 
-    if (!sections_.empty()) {
-        std::list<Section>::iterator it;
-        for (it = sections_.begin(); it != std::prev(sections_.end()); ++it) {
-            out << it->getStartPoint() << ", ";
-        }
-        out << sections_.back().getStartPoint() << " ]";
-    } else {
-        out << " ]";
-    }
+//     if (!sections_.empty()) {
+//         std::list<Section>::iterator it;
+//         for (it = sections_.begin(); it != std::prev(sections_.end()); ++it) {
+//             out << it->getStartPoint() << ", ";
+//         }
+//         out << sections_.back().getStartFrame() << " ]";
+//     } else {
+//         out << " ]";
+//     }
 
-    return out;
-}
+//     return out;
+// }
 
 const Segment& PathManager::getSegmentAtTime(double time)
 {

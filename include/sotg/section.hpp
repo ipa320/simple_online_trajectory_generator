@@ -6,6 +6,7 @@
 #include "sotg/phase.hpp"
 #include "sotg/point.hpp"
 #include "sotg/section_constraint.hpp"
+#include "sotg/transform.hpp"
 
 namespace SOTG {
 namespace detail {
@@ -14,10 +15,9 @@ namespace detail {
     // Stores kinematic states for position and velocity calculations along this sectionin inside of phases
     class Section {
     private:
-        Point& start_point_;
-        Point& end_point_;
-        Point diff_;
-        Point dir_;
+        Frame& start_point_;
+        Frame& end_point_;
+        Transform transform_;
         double length_;
         SectionConstraint constraint_;
 
@@ -37,8 +37,8 @@ namespace detail {
         double time_shift_ = 0.0;
 
     public:
-        const Point& getStartPoint() const { return start_point_; }
-        const Point& getEndPoint() const { return end_point_; }
+        const Frame& getStartFrame() const { return start_point_; }
+        const Frame& getEndFrame() const { return end_point_; }
 
         double getAccMaxLinear() const { return constraint_.getAccelerationMagnitudeLinear(); }
         double getAccMaxAngular() const { return constraint_.getAccelerationMagnitudeAngular(); }
@@ -46,13 +46,11 @@ namespace detail {
         double getVelMaxAngular() const { return constraint_.getVelocityMagnitudeAngular(); }
 
         double getLength() const { return length_; }
-        const Point& getDirection() const { return dir_; }
-        const Point& getDifference() const { return diff_; }
+        const Transform& getTransform() const { return transform_; }
         void setLength(double length) { length_ = length; }
-        void setDirection(const Point& dir) { dir_ = dir; }
-        void setDifference(const Point& diff) { diff_ = diff; }
+        void setTransform(const Transform& transform) { transform_ = transform; }
 
-        Section(Point& p_start_ref, Point& p_end_ref, SectionConstraint constraint_copy, size_t section_id);
+        Section(Frame& p_start_ref, Frame& p_end_ref, SectionConstraint constraint_copy, size_t section_id);
 
         void setIndexSlowestDoF(int index) { index_slowest_dof_ = index; }
 

@@ -16,64 +16,31 @@ double calcPhaseLength(const Phase& phase)
     return std::sqrt(sum);
 }
 
-void ConstantAccelerationSolver::calcAccAndVelPerDoF(const Section& section, std::vector<double>& a_max_vec,
-                                                     std::vector<double>& v_max_vec)
+void ConstantAccelerationSolver::projectLimitsOntoDoF(const Section& section, std::vector<double>& a_max_vec,
+                                                      std::vector<double>& v_max_vec)
 {
-    Point p_start = section.getStartPoint();
-    Point p_end = section.getEndPoint();
-
     double a_max_lin = section.getAccMaxLinear();
-    double a_max_ang = section.getAccMaxAngular();
     double v_max_lin = section.getVelMaxLinear();
+
+    const Frame& diff = section.getDifference();
+
+    const Eigen::Vector3d& diff_lin = diff.getLocation();
+    Eigen::Vector3d dir_lin = diff_lin / diff_lin.norm();
+
+    for (Eigen::Index i = 0; i < dir_lin.size(); ++i) {
+        a_max_vec.push_back(std::abs(a_max_lin * dir_lin[i]));
+        v_max_vec.push_back(std::abs(v_max_lin * dir_lin[i]));
+    }
+
+    double a_max_ang = section.getAccMaxAngular();
     double v_max_ang = section.getVelMaxAngular();
 
-    Point dir_lin;
-    Point diff_lin;
+    const Eigen::Quaterniond& diff_ang = diff.getOrientation();
+    const Eigen::Vector3d& dir_ang = diff_ang.vec();
 
-    Point dir_ang;
-    Point diff_ang;
-    if (p_start.getOrientationIndex() != -1) {
-        for (int i = 0; i < p_start.getOrientationIndex(); i++) {
-            diff_lin.addValue(p_end[i] - p_start[i]);
-        }
-        double diff_lin_mag = diff_lin.norm();
-
-        if (utility::nearlyZero(diff_lin_mag)) {
-            dir_lin.zeros(diff_lin.size());
-        } else {
-            dir_lin = diff_lin / diff_lin_mag;
-        }
-
-        for (size_t i = p_start.getOrientationIndex(); i < p_start.size(); i++) {
-            diff_ang.addValue(p_end[i] - p_start[i]);
-        }
-        double diff_ang_mag = diff_ang.norm();
-
-        if (utility::nearlyZero(diff_ang_mag)) {
-            dir_ang.zeros(diff_ang.size());
-        } else {
-            dir_ang = diff_ang / diff_ang_mag;
-        }
-    } else {
-        for (size_t i = 0; i < p_start.size(); i++) {
-            diff_lin.addValue(p_end[i] - p_start[i]);
-        }
-        double diff_lin_mag = diff_lin.norm();
-
-        if (utility::nearlyZero(diff_lin_mag)) {
-            dir_lin.zeros(diff_lin.size());
-        } else {
-            dir_lin = diff_lin / diff_lin_mag;
-        }
-    }
-
-    for (auto& dir : dir_lin) {
-        a_max_vec.push_back(std::abs(a_max_lin * dir));
-        v_max_vec.push_back(std::abs(v_max_lin * dir));
-    }
-    for (auto& dir : dir_ang) {
-        a_max_vec.push_back(std::abs(a_max_ang * dir));
-        v_max_vec.push_back(std::abs(v_max_ang * dir));
+    for (Eigen::Index i = 0; i < dir_ang.size(); ++i) {
+        a_max_vec.push_back(std::abs(a_max_ang * dir_ang[i]));
+        v_max_vec.push_back(std::abs(v_max_ang * dir_ang[i]));
     }
 }
 
@@ -186,15 +153,32 @@ void ConstantAccelerationSolver::calcTotalTimeAndDistanceSingleDoF(double& a_max
     }
 }
 
-void ConstantAccelerationSolver::calcTimesAndLengthsMultiDoF(Phase& acc_phase, Phase& coast_phase,
-                                                             Phase& dec_phase,
-                                                             std::vector<double>& total_time_per_dof,
-                                                             std::vector<double>& total_length_per_dof, Point diff,
-                                                             std::vector<double>& a_max_vec,
-                                                             std::vector<double>& v_max_vec)
+void ConstantAccelerationSolver::calcTimesAndLengthsMultiDoF(
+    Phase& acc_phase, Phase& coast_phase, Phase& dec_phase, std::vector<double>& total_time_per_dof,
+    std::vector<double>& total_length_per_dof, const Frame& diff, double angular_distance,
+    std::vector<double>& a_max_vec, std::vector<double>& v_max_vec)
 {
-    for (size_t i = 0; i < diff.size(); i++) {
-        double total_length_dof = std::abs(diff[i]);
+    const Eigen::VectorXd& location = diff.getLocation();
+    const Eigen::Quaterniond& orientation = diff.getOrientation();
+
+    // assume cartesian coordinates
+
+    // location
+    for (Eigen::Index i = 0; i < location.size(); ++i) {
+        double total_length_dof = std::abs(location[i]);
+        double total_time_dof = 0.0;
+
+        calcTotalTimeAndDistanceSingleDoF(a_max_vec[i], v_max_vec[i], total_length_dof, total_time_dof);
+
+        total_time_per_dof.push_back(total_time_dof);
+        total_length_per_dof.push_back(total_length_dof);
+    }
+
+    // orientation
+    constexpr size_t size_quat = 4;
+    const Eigen::Vector3d& orientation_dir = orientation.vec();
+    for (Eigen::Index i = 0; i < orientation_dir.size(); ++i) {
+        double total_length_dof = std::abs(orientation_dir[i]);
         double total_time_dof = 0.0;
 
         calcTotalTimeAndDistanceSingleDoF(a_max_vec[i], v_max_vec[i], total_length_dof, total_time_dof);
@@ -207,7 +191,7 @@ void ConstantAccelerationSolver::calcTimesAndLengthsMultiDoF(Phase& acc_phase, P
 
     // phase sync
     // https://theses.hal.science/tel-01285383/document p.62 ff.
-    for (size_t i = 0; i < diff.size(); i++) {
+    for (size_t i = 0; i < total_time_per_dof.size(); i++) {
         double lambda = 0.0;  // lambda is defined in theses
         if (!utility::nearlyZero(total_length_per_dof[index_slowest_dof])) {
             lambda = total_length_per_dof[i] / total_length_per_dof[index_slowest_dof];
@@ -225,7 +209,13 @@ void ConstantAccelerationSolver::calcTimesAndLengthsMultiDoF(Phase& acc_phase, P
         a_max_vec[i] *= lambda * acc_scaling_factor;
         v_max_vec[i] *= lambda * vel_scaling_factor;
 
-        double section_length = std::abs(diff[i]);
+        double section_length;
+        if (i < location.size()) {
+            section_length = std::abs(location[i]);
+        } else {
+            section_length = std::abs(orientation_dir[i] * angular_distance);
+        }
+
         PhaseDoF acc_phase_single_dof, coast_phase_single_dof, dec_phase_single_dof;
         calcPhaseTimeAndDistance(a_max_vec[i], v_max_vec[i], section_length, acc_phase_single_dof,
                                  coast_phase_single_dof, dec_phase_single_dof);
@@ -258,27 +248,26 @@ void ConstantAccelerationSolver::calcTimesAndLengthsMultiDoF(Phase& acc_phase, P
     }
 }
 
-Section ConstantAccelerationSolver::calcSection(Point& p_start_ref, Point& p_end_ref,
+Section ConstantAccelerationSolver::calcSection(Frame& p_start_ref, Frame& p_end_ref,
                                                 SectionConstraint constraint_copy, size_t section_id)
 {
     Section section(p_start_ref, p_end_ref, constraint_copy, section_id);
 
-    std::vector<double> reduced_acceleration_per_dof;
-    std::vector<double> reduced_velocity_per_dof;
+    const Frame& diff = section.getDifference();
+    double angular_distance = section.getAngularDistance();
 
-    calcAccAndVelPerDoF(section, reduced_acceleration_per_dof, reduced_velocity_per_dof);
-
-    Point p_start = section.getStartPoint();
-    Point p_end = section.getEndPoint();
-    Point diff = p_end - p_start;
-
-    std::vector<double> total_time_per_dof;
-    std::vector<double> total_length_per_dof;
     std::vector<Phase> phases;
     Phase acc_phase, coast_phase, dec_phase;
 
+    std::vector<double> reduced_acc_per_dof_lin;
+    std::vector<double> reduced_vel_per_dof_lin;
+
+    std::vector<double> total_time_per_dof, total_length_per_dof;
+    std::vector<double> reduced_acceleration_per_dof, reduced_velocity_per_dof;
+
+    projectLimitsOntoDoF(section, reduced_acc_per_dof_lin, reduced_vel_per_dof_lin);
     calcTimesAndLengthsMultiDoF(acc_phase, coast_phase, dec_phase, total_time_per_dof, total_length_per_dof, diff,
-                                reduced_acceleration_per_dof, reduced_velocity_per_dof);
+                                angular_distance, reduced_acceleration_per_dof, reduced_velocity_per_dof);
 
     int index_slowest_dof = findIndexOfMax(total_time_per_dof);
     double T_total = total_time_per_dof[index_slowest_dof];
@@ -318,294 +307,299 @@ double calcVecNorm(const std::vector<double>& vec)  // into util
     return std::sqrt(sum);
 }
 
-void ConstantAccelerationSolver::calcPreBlendParams(double blending_dist_pre, const Section& pre_section,
-                                                    Point& A_blend, double& T_blend,
-                                                    double& vel_pre_blend_magnitude,
-                                                    double& absolute_blend_start_time_with_shift)
-{
-    const Point& A = pre_section.getStartPoint();
-    const Point& AB = pre_section.getDifference();
-    double length_AB = pre_section.getLength();
+// void ConstantAccelerationSolver::calcPreBlendParams(double blending_dist_pre, const Section& pre_section,
+//                                                     Frame& A_blend, double& T_blend,
+//                                                     double& vel_pre_blend_magnitude,
+//                                                     double& absolute_blend_start_time_with_shift)
+// {
+//     const Frame& A = pre_section.getStartFrame();
+//     const Frame& AB = pre_section.getDifference();
+//     double length_AB = pre_section.getLength();
 
-    A_blend = A + AB * ((length_AB - blending_dist_pre) / length_AB);
+//     A_blend.setLocation(A.getLocation() + AB.getLocation() * ((length_AB - blending_dist_pre) / length_AB));
+//     // Todo how do I do this with a quaternion? Should it be down for the angle at all
 
-    double absolute_blend_start_time_without_shift;
-    Point vel_pre_blend;
-    calcVelAndTimeByDistance(pre_section, length_AB - blending_dist_pre, vel_pre_blend,
-                             absolute_blend_start_time_without_shift);
-    vel_pre_blend_magnitude = vel_pre_blend.norm();
+//     double absolute_blend_start_time_without_shift;
+//     Frame vel_pre_blend;
+//     calcVelAndTimeByDistance(pre_section, length_AB - blending_dist_pre, vel_pre_blend,
+//                              absolute_blend_start_time_without_shift);
+//     vel_pre_blend_magnitude = vel_pre_blend.norm();
 
-    if (!utility::nearlyZero(vel_pre_blend_magnitude)) {
-        T_blend = 2 * blending_dist_pre / vel_pre_blend_magnitude;
-    } else {
-        T_blend = 0.0;
-    }
+//     if (!utility::nearlyZero(vel_pre_blend_magnitude)) {
+//         T_blend = 2 * blending_dist_pre / vel_pre_blend_magnitude;
+//     } else {
+//         T_blend = 0.0;
+//     }
 
-    absolute_blend_start_time_with_shift = absolute_blend_start_time_without_shift - pre_section.getTimeShift();
-}
+//     absolute_blend_start_time_with_shift = absolute_blend_start_time_without_shift - pre_section.getTimeShift();
+// }
 
-void ConstantAccelerationSolver::calcPostBlendParams(double blending_dist_post, const Section& post_section,
-                                                     Point& C_blend, double& T_blend,
-                                                     double& vel_post_blend_magnitude,
-                                                     double& absolute_blend_end_time_without_shift)
-{
-    const Point& B = post_section.getStartPoint();
-    const Point& BC = post_section.getDifference();
-    double length_BC = post_section.getLength();
+// void ConstantAccelerationSolver::calcPostBlendParams(double blending_dist_post, const Section& post_section,
+//                                                      Frame& C_blend, double& T_blend,
+//                                                      double& vel_post_blend_magnitude,
+//                                                      double& absolute_blend_end_time_without_shift)
+// {
+//     const Frame& B = post_section.getStartFrame();
+//     const Frame& BC = post_section.getDifference();
+//     double length_BC = post_section.getLength();
 
-    if (utility::nearlyZero(length_BC)) {
-        C_blend = B;
-    } else {
-        C_blend = B + BC * (blending_dist_post / length_BC);
-    }
+//     if (utility::nearlyZero(length_BC)) {
+//         C_blend = B;
+//     } else {
+//         C_blend = B + BC * (blending_dist_post / length_BC);
+//     }
 
-    Point vel_post_blend;
-    calcVelAndTimeByDistance(post_section, blending_dist_post, vel_post_blend,
-                             absolute_blend_end_time_without_shift);
-    vel_post_blend_magnitude = vel_post_blend.norm();
+//     Frame vel_post_blend;
+//     calcVelAndTimeByDistance(post_section, blending_dist_post, vel_post_blend,
+//                              absolute_blend_end_time_without_shift);
+//     vel_post_blend_magnitude = vel_post_blend.norm();
 
-    if (!utility::nearlyZero(vel_post_blend_magnitude)) {
-        T_blend = 2 * blending_dist_post / vel_post_blend_magnitude;
-    } else {
-        T_blend = 0.0;
-    }
-}
+//     if (!utility::nearlyZero(vel_post_blend_magnitude)) {
+//         T_blend = 2 * blending_dist_post / vel_post_blend_magnitude;
+//     } else {
+//         T_blend = 0.0;
+//     }
+// }
 
-void ConstantAccelerationSolver::calcSecondBlendingDist(double T_blend, double T_acc_second,
-                                                        double a_max_magnitude_second,
-                                                        double vel_first_blend_magnitude,
-                                                        double blending_dist_first, double& blending_dist_second,
-                                                        [[maybe_unused]] size_t segment_id)
-{
-    if (utility::nearlyZero(vel_first_blend_magnitude)) {
-        blending_dist_second = 0.0;
-        return;
-    }
+// void ConstantAccelerationSolver::calcSecondBlendingDist(double T_blend, double T_acc_second,
+//                                                         double a_max_magnitude_second,
+//                                                         double vel_first_blend_magnitude,
+//                                                         double blending_dist_first, double&
+//                                                         blending_dist_second,
+//                                                         [[maybe_unused]] size_t segment_id)
+// {
+//     if (utility::nearlyZero(vel_first_blend_magnitude)) {
+//         blending_dist_second = 0.0;
+//         return;
+//     }
 
-    // If "second" values are post values, the "first" values will be pre values. And vice versa
-    if (T_blend < T_acc_second) {
-#ifdef DEBUG
-        std::cout << "[" << segment_id << "]"
-                  << " Info: Blending into acceleration phase" << std::endl;
-#endif
-        blending_dist_second = 2 * std::pow(blending_dist_first, 2) * a_max_magnitude_second
-                               / std::pow(vel_first_blend_magnitude, 2);
-    } else {
-#ifdef DEBUG
-        std::cout << "[" << segment_id << "]"
-                  << " Info: Blending into constant velocity phase" << std::endl;
-#endif
-        blending_dist_second
-            = blending_dist_first * a_max_magnitude_second * T_acc_second / vel_first_blend_magnitude;
-    }
-}
+//     // If "second" values are post values, the "first" values will be pre values. And vice versa
+//     if (T_blend < T_acc_second) {
+// #ifdef DEBUG
+//         std::cout << "[" << segment_id << "]"
+//                   << " Info: Blending into acceleration phase" << std::endl;
+// #endif
+//         blending_dist_second = 2 * std::pow(blending_dist_first, 2) * a_max_magnitude_second
+//                                / std::pow(vel_first_blend_magnitude, 2);
+//     } else {
+// #ifdef DEBUG
+//         std::cout << "[" << segment_id << "]"
+//                   << " Info: Blending into constant velocity phase" << std::endl;
+// #endif
+//         blending_dist_second
+//             = blending_dist_first * a_max_magnitude_second * T_acc_second / vel_first_blend_magnitude;
+//     }
+// }
 
-void ConstantAccelerationSolver::calcSegmentPreparations(const Section& pre_section, const Section& post_section,
-                                                         std::vector<double>& a_max_post,
-                                                         std::vector<double>& a_max_pre,
-                                                         double& L_acc_magnitude_post, double& T_acc_post,
-                                                         double& T_acc_pre)
-{
-    const Phase& acc_phase_post = post_section.getPhaseByType(PhaseType::ConstantAcceleration);
-    T_acc_post = acc_phase_post.duration;
-    a_max_post = post_section.getAdaptedAcceleration();
+// void ConstantAccelerationSolver::calcSegmentPreparations(const Section& pre_section, const Section&
+// post_section,
+//                                                          std::vector<double>& a_max_post,
+//                                                          std::vector<double>& a_max_pre,
+//                                                          double& L_acc_magnitude_post, double& T_acc_post,
+//                                                          double& T_acc_pre)
+// {
+//     const Phase& acc_phase_post = post_section.getPhaseByType(PhaseType::ConstantAcceleration);
+//     T_acc_post = acc_phase_post.duration;
+//     a_max_post = post_section.getAdaptedAcceleration();
 
-    const Phase& acc_phase_pre = pre_section.getPhaseByType(PhaseType::ConstantAcceleration);
-    T_acc_pre = acc_phase_pre.duration;
-    a_max_pre = pre_section.getAdaptedAcceleration();
+//     const Phase& acc_phase_pre = pre_section.getPhaseByType(PhaseType::ConstantAcceleration);
+//     T_acc_pre = acc_phase_pre.duration;
+//     a_max_pre = pre_section.getAdaptedAcceleration();
 
-    L_acc_magnitude_post = 0.0;
-    for (auto& component : acc_phase_post.components) {
-        L_acc_magnitude_post += std::pow(component.length, 2);
-    }
-    L_acc_magnitude_post = std::sqrt(L_acc_magnitude_post);
-}
+//     L_acc_magnitude_post = 0.0;
+//     for (auto& component : acc_phase_post.components) {
+//         L_acc_magnitude_post += std::pow(component.length, 2);
+//     }
+//     L_acc_magnitude_post = std::sqrt(L_acc_magnitude_post);
+// }
 
-bool ConstantAccelerationSolver::isBlendAccelerationTooHigh(const std::vector<double>& a_max_blend,
-                                                            const double& T_blend,
-                                                            const double& vel_pre_blend_magnitude,
-                                                            const double& vel_post_blend_magnitude,
-                                                            const Section& pre_section,
-                                                            const Section& post_section, size_t segment_id)
-{
-    const Point& dir_AB = pre_section.getDirection();
-    const Point& dir_BC = post_section.getDirection();
+// bool ConstantAccelerationSolver::isBlendAccelerationTooHigh(const std::vector<double>& a_max_blend,
+//                                                             const double& T_blend,
+//                                                             const double& vel_pre_blend_magnitude,
+//                                                             const double& vel_post_blend_magnitude,
+//                                                             const Section& pre_section,
+//                                                             const Section& post_section, size_t segment_id)
+// {
+//     const Frame& dir_AB = pre_section.getDirection();
+//     const Frame& dir_BC = post_section.getDirection();
 
-    Point blend_acc, blend_acc_linear, blend_acc_angular;
-    double blend_acc_linear_mag, blend_acc_angular_mag;
-    double a_max_linear_mag, a_max_angular_mag;
-    std::vector<double> a_max_linear, a_max_angular;
-    if (!utility::nearlyZero(T_blend)) {
-        blend_acc = (dir_BC * vel_post_blend_magnitude - dir_AB * vel_pre_blend_magnitude) / T_blend;
-        size_t o_index = blend_acc.getOrientationIndex();
+//     Frame blend_acc, blend_acc_linear, blend_acc_angular;
+//     double blend_acc_linear_mag, blend_acc_angular_mag;
+//     double a_max_linear_mag, a_max_angular_mag;
+//     std::vector<double> a_max_linear, a_max_angular;
+//     if (!utility::nearlyZero(T_blend)) {
+//         blend_acc = (dir_BC * vel_post_blend_magnitude - dir_AB * vel_pre_blend_magnitude) / T_blend;
+//         size_t o_index = blend_acc.getOrientationIndex();
 
-        for (size_t i = 0; i < blend_acc.size(); ++i) {
-            if (i < o_index) {
-                blend_acc_linear.addValue(blend_acc[i]);
-                a_max_linear.push_back(a_max_blend[i]);
-            } else {
-                blend_acc_angular.addValue(blend_acc[i]);
-                a_max_angular.push_back(a_max_blend[i]);
-            }
-        }
-        blend_acc_linear_mag = blend_acc_linear.norm();
-        blend_acc_angular_mag = blend_acc_angular.norm();
+//         for (size_t i = 0; i < blend_acc.size(); ++i) {
+//             if (i < o_index) {
+//                 blend_acc_linear.addValue(blend_acc[i]);
+//                 a_max_linear.push_back(a_max_blend[i]);
+//             } else {
+//                 blend_acc_angular.addValue(blend_acc[i]);
+//                 a_max_angular.push_back(a_max_blend[i]);
+//             }
+//         }
+//         blend_acc_linear_mag = blend_acc_linear.norm();
+//         blend_acc_angular_mag = blend_acc_angular.norm();
 
-        a_max_linear_mag = calcVecNorm(a_max_linear);
-        a_max_angular_mag = calcVecNorm(a_max_angular);
+//         a_max_linear_mag = calcVecNorm(a_max_linear);
+//         a_max_angular_mag = calcVecNorm(a_max_angular);
 
-    } else {
-        blend_acc_angular_mag = 0.0;
-        blend_acc_linear_mag = 0.0;
+//     } else {
+//         blend_acc_angular_mag = 0.0;
+//         blend_acc_linear_mag = 0.0;
 
-        a_max_linear_mag = 0.0;
-        a_max_angular_mag = 0.0;
-    }
+//         a_max_linear_mag = 0.0;
+//         a_max_angular_mag = 0.0;
+//     }
 
-    if (blend_acc_linear_mag > a_max_linear_mag && !utility::nearlyZero(blend_acc_linear_mag)) {
-        std::cout << "[" << segment_id << "]"
-                  << " Warning: Eceeding maximum linear acceleration!" << std::endl;
-        std::cout << "[" << segment_id << "]"
-                  << " Linear Acceleration magnitude would be " << blend_acc_linear_mag << " m/s^2, but only "
-                  << a_max_linear_mag << " m/s^2 is allowed" << std::endl;
-        std::cout << "[" << segment_id << "]"
-                  << " Deactivating blending in this segment" << std::endl;
-        return true;
-    } else if (blend_acc_angular_mag > a_max_angular_mag && !utility::nearlyZero(blend_acc_angular_mag)) {
-        std::cout << "[" << segment_id << "]"
-                  << " Warning: Eceeding maximum angular acceleration!" << std::endl;
-        std::cout << "[" << segment_id << "]"
-                  << " Angular acceleration magnitude would be " << blend_acc_angular_mag << " 1/s^2, but only "
-                  << a_max_angular_mag << " 1/s^2 is allowed" << std::endl;
-        std::cout << "[" << segment_id << "]"
-                  << " Deactivating blending in this segment" << std::endl;
-        return true;
-    } else
-        return false;
-}
+//     if (blend_acc_linear_mag > a_max_linear_mag && !utility::nearlyZero(blend_acc_linear_mag)) {
+//         std::cout << "[" << segment_id << "]"
+//                   << " Warning: Eceeding maximum linear acceleration!" << std::endl;
+//         std::cout << "[" << segment_id << "]"
+//                   << " Linear Acceleration magnitude would be " << blend_acc_linear_mag << " m/s^2, but only "
+//                   << a_max_linear_mag << " m/s^2 is allowed" << std::endl;
+//         std::cout << "[" << segment_id << "]"
+//                   << " Deactivating blending in this segment" << std::endl;
+//         return true;
+//     } else if (blend_acc_angular_mag > a_max_angular_mag && !utility::nearlyZero(blend_acc_angular_mag)) {
+//         std::cout << "[" << segment_id << "]"
+//                   << " Warning: Eceeding maximum angular acceleration!" << std::endl;
+//         std::cout << "[" << segment_id << "]"
+//                   << " Angular acceleration magnitude would be " << blend_acc_angular_mag << " 1/s^2, but only "
+//                   << a_max_angular_mag << " 1/s^2 is allowed" << std::endl;
+//         std::cout << "[" << segment_id << "]"
+//                   << " Deactivating blending in this segment" << std::endl;
+//         return true;
+//     } else
+//         return false;
+// }
 
-void ConstantAccelerationSolver::setNoBlendingParams(const Section& pre_section, const Section& post_section,
-                                                     double& T_blend, double& t_abs_start_blend_with_shift,
-                                                     double& t_abs_end_blend_without_shift, Point& A_blend,
-                                                     Point& C_blend, double& vel_pre_blend_magnitude,
-                                                     double& vel_post_blend_magnitude)
-{
-    T_blend = 0.0;
-    t_abs_start_blend_with_shift = pre_section.getEndTime() - pre_section.getTimeShift();
-    t_abs_end_blend_without_shift = post_section.getStartTime();
-    A_blend = post_section.getStartPoint();
-    C_blend = A_blend;
-    vel_pre_blend_magnitude = 0.0;
-    vel_post_blend_magnitude = 0.0;
-}
+// void ConstantAccelerationSolver::setNoBlendingParams(const Section& pre_section, const Section& post_section,
+//                                                      double& T_blend, double& t_abs_start_blend_with_shift,
+//                                                      double& t_abs_end_blend_without_shift, Frame& A_blend,
+//                                                      Frame& C_blend, double& vel_pre_blend_magnitude,
+//                                                      double& vel_post_blend_magnitude)
+// {
+//     T_blend = 0.0;
+//     t_abs_start_blend_with_shift = pre_section.getEndTime() - pre_section.getTimeShift();
+//     t_abs_end_blend_without_shift = post_section.getStartTime();
+//     A_blend = post_section.getStartFrame();
+//     C_blend = A_blend;
+//     vel_pre_blend_magnitude = 0.0;
+//     vel_post_blend_magnitude = 0.0;
+// }
 
-std::shared_ptr<BlendSegment>
-ConstantAccelerationSolver::calcBlendSegment(Section& pre_section, Section& post_section,
-                                             const SegmentConstraint& constraint, size_t segment_id,
-                                             std::map<std::string, double>& debug_output)
-{
-    std::cout << "\n-- Segment " << segment_id << " --\n" << std::endl;
-    /* Blending from A' to C' across B with constant acceleration
-       https://www.diag.uniroma1.it/~deluca/rob1_en/14_TrajectoryPlanningCartesian.pdf
+// std::shared_ptr<BlendSegment>
+// ConstantAccelerationSolver::calcBlendSegment(Section& pre_section, Section& post_section,
+//                                              const SegmentConstraint& constraint, size_t segment_id,
+//                                              std::map<std::string, double>& debug_output)
+// {
+//     std::cout << "\n-- Segment " << segment_id << " --\n" << std::endl;
+//     /* Blending from A' to C' across B with constant acceleration
+//        https://www.diag.uniroma1.it/~deluca/rob1_en/14_TrajectoryPlanningCartesian.pdf
 
-              B
-            /   \
-          A'.-'-. C'
-        /           \
-      A               C
+//               B
+//             /   \
+//           A'.-'-. C'
+//         /           \
+//       A               C
 
-    */
+//     */
 
-    double length_AB = pre_section.getLength();
-    double length_BC = post_section.getLength();
-    double a_max_magnitude_post, a_max_magnitude_pre, L_acc_magnitude_post, T_acc_post, T_acc_pre;
+//     double length_AB = pre_section.getLength();
+//     double length_BC = post_section.getLength();
+//     double a_max_magnitude_post, a_max_magnitude_pre, L_acc_magnitude_post, T_acc_post, T_acc_pre;
 
-    std::vector<double> a_max_post, a_max_pre, a_max_blend;
+//     std::vector<double> a_max_post, a_max_pre, a_max_blend;
 
-    calcSegmentPreparations(pre_section, post_section, a_max_post, a_max_pre, L_acc_magnitude_post, T_acc_post,
-                            T_acc_pre);
+//     calcSegmentPreparations(pre_section, post_section, a_max_post, a_max_pre, L_acc_magnitude_post, T_acc_post,
+//                             T_acc_pre);
 
-    a_max_magnitude_post = calcVecNorm(a_max_post);
-    a_max_magnitude_pre = calcVecNorm(a_max_pre);
+//     a_max_magnitude_post = calcVecNorm(a_max_post);
+//     a_max_magnitude_pre = calcVecNorm(a_max_pre);
 
-    if (a_max_magnitude_post >= a_max_magnitude_pre) {
-        a_max_blend = a_max_post;
-    } else {
-        a_max_blend = a_max_pre;
-    }
+//     if (a_max_magnitude_post >= a_max_magnitude_pre) {
+//         a_max_blend = a_max_post;
+//     } else {
+//         a_max_blend = a_max_pre;
+//     }
 
-    double blending_dist_pre = constraint.getBlendDistance();
+//     double blending_dist_pre = constraint.getBlendDistance();
 
-    if (blending_dist_pre > length_AB / 2) {
-        std::cout << "[" << segment_id << "]"
-                  << " Warning: Pre blending distance is croped" << std::endl;
-        blending_dist_pre = length_AB / 2;
-    }
+//     if (blending_dist_pre > length_AB / 2) {
+//         std::cout << "[" << segment_id << "]"
+//                   << " Warning: Pre blending distance is croped" << std::endl;
+//         blending_dist_pre = length_AB / 2;
+//     }
 
-    Point A_blend;
-    double T_blend, vel_pre_blend_magnitude, t_abs_start_blend_with_shift;
-    calcPreBlendParams(blending_dist_pre, pre_section, A_blend, T_blend, vel_pre_blend_magnitude,
-                       t_abs_start_blend_with_shift);
+//     Frame A_blend;
+//     double T_blend, vel_pre_blend_magnitude, t_abs_start_blend_with_shift;
+//     calcPreBlendParams(blending_dist_pre, pre_section, A_blend, T_blend, vel_pre_blend_magnitude,
+//                        t_abs_start_blend_with_shift);
 
-    double blending_dist_post = 0.0;
-    calcSecondBlendingDist(T_blend, T_acc_post, a_max_magnitude_post, vel_pre_blend_magnitude, blending_dist_pre,
-                           blending_dist_post, segment_id);
+//     double blending_dist_post = 0.0;
+//     calcSecondBlendingDist(T_blend, T_acc_post, a_max_magnitude_post, vel_pre_blend_magnitude,
+//     blending_dist_pre,
+//                            blending_dist_post, segment_id);
 
-    Point vel_post_blend;
-    Point C_blend;
-    double vel_post_blend_magnitude;
-    double t_abs_end_blend_without_shift;
+//     Frame vel_post_blend;
+//     Frame C_blend;
+//     double vel_post_blend_magnitude;
+//     double t_abs_end_blend_without_shift;
 
-    if (blending_dist_post >= length_BC / 2) {
-        blending_dist_post = length_BC / 2;
+//     if (blending_dist_post >= length_BC / 2) {
+//         blending_dist_post = length_BC / 2;
 
-        calcPostBlendParams(blending_dist_post, post_section, C_blend, T_blend, vel_post_blend_magnitude,
-                            t_abs_end_blend_without_shift);
+//         calcPostBlendParams(blending_dist_post, post_section, C_blend, T_blend, vel_post_blend_magnitude,
+//                             t_abs_end_blend_without_shift);
 
-        calcSecondBlendingDist(T_blend, T_acc_pre, a_max_magnitude_pre, vel_post_blend_magnitude,
-                               blending_dist_post, blending_dist_pre, segment_id);
+//         calcSecondBlendingDist(T_blend, T_acc_pre, a_max_magnitude_pre, vel_post_blend_magnitude,
+//                                blending_dist_post, blending_dist_pre, segment_id);
 
-        calcPreBlendParams(blending_dist_pre, pre_section, A_blend, T_blend, vel_pre_blend_magnitude,
-                           t_abs_start_blend_with_shift);
+//         calcPreBlendParams(blending_dist_pre, pre_section, A_blend, T_blend, vel_pre_blend_magnitude,
+//                            t_abs_start_blend_with_shift);
 
-    } else {
-        calcPosAndVelSection(T_blend, post_section, C_blend, vel_post_blend);
-        vel_post_blend_magnitude = vel_post_blend.norm();
+//     } else {
+//         calcPosAndVelSection(T_blend, post_section, C_blend, vel_post_blend);
+//         vel_post_blend_magnitude = vel_post_blend.norm();
 
-        calcVelAndTimeByDistance(post_section, blending_dist_post, vel_post_blend, t_abs_end_blend_without_shift);
-    }
+//         calcVelAndTimeByDistance(post_section, blending_dist_post, vel_post_blend,
+//         t_abs_end_blend_without_shift);
+//     }
 
-    if (isBlendAccelerationTooHigh(a_max_blend, T_blend, vel_pre_blend_magnitude, vel_post_blend_magnitude,
-                                   pre_section, post_section, segment_id)) {
-        setNoBlendingParams(pre_section, post_section, T_blend, t_abs_start_blend_with_shift,
-                            t_abs_end_blend_without_shift, A_blend, C_blend, vel_pre_blend_magnitude,
-                            vel_post_blend_magnitude);
-    }
+//     if (isBlendAccelerationTooHigh(a_max_blend, T_blend, vel_pre_blend_magnitude, vel_post_blend_magnitude,
+//                                    pre_section, post_section, segment_id)) {
+//         setNoBlendingParams(pre_section, post_section, T_blend, t_abs_start_blend_with_shift,
+//                             t_abs_end_blend_without_shift, A_blend, C_blend, vel_pre_blend_magnitude,
+//                             vel_post_blend_magnitude);
+//     }
 
-    // Absolute Time denotes a point in time relative to the first waypoint in the path
-    // Time shift is the result of blending in between the sections, thereby reducing the time until the next
-    // section is reached There are three other time frames to be aware of: Section, Segment and Phase relative
-    // times denoted as t_section, t_segment and t_phase respectively
-    double t_abs_end_blend_with_shift = t_abs_start_blend_with_shift + T_blend;
-    double time_shift = t_abs_end_blend_without_shift - t_abs_end_blend_with_shift;
+//     // Absolute Time denotes a point in time relative to the first waypoint in the path
+//     // Time shift is the result of blending in between the sections, thereby reducing the time until the next
+//     // section is reached There are three other time frames to be aware of: Section, Segment and Phase relative
+//     // times denoted as t_section, t_segment and t_phase respectively
+//     double t_abs_end_blend_with_shift = t_abs_start_blend_with_shift + T_blend;
+//     double time_shift = t_abs_end_blend_without_shift - t_abs_end_blend_with_shift;
 
-    post_section.setTimeShift(time_shift);
+//     post_section.setTimeShift(time_shift);
 
-    std::shared_ptr<BlendSegment> segment(new BlendSegment(pre_section, post_section, constraint,
-                                                           vel_pre_blend_magnitude, vel_post_blend_magnitude,
-                                                           T_blend, t_abs_start_blend_with_shift));
+//     std::shared_ptr<BlendSegment> segment(new BlendSegment(pre_section, post_section, constraint,
+//                                                            vel_pre_blend_magnitude, vel_post_blend_magnitude,
+//                                                            T_blend, t_abs_start_blend_with_shift));
 
-    segment->setStartPoint(A_blend);
-    segment->setEndPoint(C_blend);
-    segment->setID(segment_id);
+//     segment->setStartPoint(A_blend);
+//     segment->setEndPoint(C_blend);
+//     segment->setID(segment_id);
 
-    debug_output["pre_blend_dist"] = blending_dist_pre;
-    debug_output["post_blend_dist"] = blending_dist_post;
-    debug_output["pre_blend_vel"] = vel_pre_blend_magnitude;
-    debug_output["post_blend_vel"] = vel_post_blend_magnitude;
+//     debug_output["pre_blend_dist"] = blending_dist_pre;
+//     debug_output["post_blend_dist"] = blending_dist_post;
+//     debug_output["pre_blend_vel"] = vel_pre_blend_magnitude;
+//     debug_output["post_blend_vel"] = vel_post_blend_magnitude;
 
-    return segment;
-}
+//     return segment;
+// }
 
 void ConstantAccelerationSolver::calcPosAndVelSingleDoFLinear(double section_dof_length, const Phase& phase,
                                                               double phase_distance_to_p_start, double t_phase,
@@ -632,9 +626,12 @@ void ConstantAccelerationSolver::calcPosAndVelSingleDoFLinear(double section_dof
 }
 
 void ConstantAccelerationSolver::calcVelAndTimeByDistance(const Section& section, double distance,
-                                                          Point& velocity_per_dof, double& t_abs)
+                                                          Frame& velocity_per_dof, double& t_abs)
 {
-    const Point& dir = section.getDirection();
+    const Transform& dir = section.getTransform();  // make this work equivalent to getting the dir
+    const Eigen::VectorXd& dir_lin = dir.getLocation();
+    const Eigen::VectorXd& dir_ang = dir.getOrientation().vec();
+    double angular_distance = dir.getAngularDistance();
 
     std::vector<double> a_max_vec = section.getAdaptedAcceleration();
     std::vector<double> v_max_vec = section.getAdaptedVelocity();
@@ -644,7 +641,12 @@ void ConstantAccelerationSolver::calcVelAndTimeByDistance(const Section& section
     // calculate the time it takes to cross "distance" in phase space
     double T_distance = 0;
     for (size_t i = 0; i < phase.components.size(); ++i) {
-        double distance_dof = std::abs(dir[i]) * distance - phase.components[i].distance_p_start;
+        double distance_dof;
+        if (i < dir_lin.size()) {
+            distance_dof = std::abs(dir_lin[i]) * distance - phase.components[i].distance_p_start;
+        } else {
+            distance_dof = std::abs(dir_ang[i]) * angular_distance - phase.components[i].angular_distance_p_start;
+        }
 
         if (phase.type == PhaseType::ConstantAcceleration) {
             if (!utility::nearlyZero(a_max_vec[i])) {
@@ -690,44 +692,46 @@ void ConstantAccelerationSolver::calcVelAndTimeByDistance(const Section& section
 }
 
 void ConstantAccelerationSolver::calcPosAndVelLinearSegment(double t_section, const LinearSegment& segment,
-                                                            Point& pos, Point& vel) const
+                                                            Frame& pos, Frame& vel) const
 {
     const Section& section = segment.getSection();
 
     calcPosAndVelSection(t_section, section, pos, vel);
 }
 
-void ConstantAccelerationSolver::calcPosAndVelBlendSegment(double t_segment, const BlendSegment& segment,
-                                                           Point& pos, Point& vel) const
+// void ConstantAccelerationSolver::calcPosAndVelBlendSegment(double t_segment, const BlendSegment& segment,
+//                                                            Frame& pos, Frame& vel) const
+// {
+//     Frame dir_AB = segment.getPreBlendDirection();
+//     Frame dir_BC = segment.getPostBlendDirection();
+
+//     double duration = segment.getDuration();
+
+//     Frame A_blend = segment.getStartPoint();
+//     double vel_blend_pre_magnitude = segment.getPreBlendVelocityMagnitude();
+//     double vel_blend_post_magnitude = segment.getPostBlendVelocityMagnitude();
+
+//     pos = A_blend + dir_AB * vel_blend_pre_magnitude * t_segment
+//           + (dir_BC * vel_blend_post_magnitude - dir_AB * vel_blend_pre_magnitude) * std::pow(t_segment, 2)
+//                 / (2 * duration);
+
+//     vel = dir_AB * vel_blend_pre_magnitude
+//           + (dir_BC * vel_blend_post_magnitude - dir_AB * vel_blend_pre_magnitude) * t_segment / duration;
+//     pos.setOrientationIndex(dir_AB.getOrientationIndex());
+//     vel.setOrientationIndex(dir_AB.getOrientationIndex());
+// }
+
+void ConstantAccelerationSolver::calcPosAndVelSection(double t_section, const Section& section, Frame& pos,
+                                                      Frame& vel) const
 {
-    Point dir_AB = segment.getPreBlendDirection();
-    Point dir_BC = segment.getPostBlendDirection();
-
-    double duration = segment.getDuration();
-
-    Point A_blend = segment.getStartPoint();
-    double vel_blend_pre_magnitude = segment.getPreBlendVelocityMagnitude();
-    double vel_blend_post_magnitude = segment.getPostBlendVelocityMagnitude();
-
-    pos = A_blend + dir_AB * vel_blend_pre_magnitude * t_segment
-          + (dir_BC * vel_blend_post_magnitude - dir_AB * vel_blend_pre_magnitude) * std::pow(t_segment, 2)
-                / (2 * duration);
-
-    vel = dir_AB * vel_blend_pre_magnitude
-          + (dir_BC * vel_blend_post_magnitude - dir_AB * vel_blend_pre_magnitude) * t_segment / duration;
-    pos.setOrientationIndex(dir_AB.getOrientationIndex());
-    vel.setOrientationIndex(dir_AB.getOrientationIndex());
-}
-
-void ConstantAccelerationSolver::calcPosAndVelSection(double t_section, const Section& section, Point& pos,
-                                                      Point& vel) const
-{
-    Point p_start = section.getStartPoint();
-    Point p_end = section.getEndPoint();
-    Point diff = p_end - p_start;
+    const Frame& p_start = section.getStartFrame();
+    const Frame& p_end = section.getEndFrame();
+    const Frame& diff = section.getTransform();
 
     const std::vector<double>& a_max_vec = section.getAdaptedAcceleration();
     const std::vector<double>& v_max_vec = section.getAdaptedVelocity();
+
+    Eigen::VectorXd pos_lin, pos_ang, vel_lin, vel_ang;
 
     const Phase& phase = section.getPhaseByTime(t_section);
     double t_phase = t_section - phase.t_start;
@@ -739,9 +743,12 @@ void ConstantAccelerationSolver::calcPosAndVelSection(double t_section, const Se
         double pos_component = p_start[i] + pos_relative_magnitude * diff[i];
         double vel_component = vel_magnitude * utility::sign(diff[i]);
 
-        pos.addValue(pos_component);
-        vel.addValue(vel_component);
+        pos_lin.addValue(pos_component);
+        vel_lin.addValue(vel_component);
     }
-    pos.setOrientationIndex(p_start.getOrientationIndex());
-    vel.setOrientationIndex(p_start.getOrientationIndex());
+
+    pos.setLocation();
+    pos.setOrientation();
+    vel.setLocation();
+    vel.setOrientation();
 }

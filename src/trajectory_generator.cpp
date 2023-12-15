@@ -28,7 +28,7 @@ double TrajectoryGenerator::getDuration()
     return total_time;
 }
 
-void TrajectoryGenerator::calcPositionAndVelocity(double time, Point& pos, Point& vel, int& id,
+void TrajectoryGenerator::calcPositionAndVelocity(double time, Frame& pos, Frame& vel, int& id,
                                                   bool disable_blending)
 {
     if (disable_blending) {

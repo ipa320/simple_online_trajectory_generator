@@ -3,19 +3,18 @@
 using namespace SOTG;
 using namespace detail;
 
-Section::Section(Point& p_start_ref, Point& p_end_ref, SectionConstraint constraint_copy, size_t section_id)
+Section::Section(Frame& p_start_ref, Frame& p_end_ref, SectionConstraint constraint_copy, size_t section_id)
     : start_point_(p_start_ref)
     , end_point_(p_end_ref)
     , constraint_(constraint_copy)
     , id_(section_id)
 {
-    diff_ = end_point_ - start_point_;
-    length_ = diff_.norm();
-    if (utility::nearlyZero(length_)) {
-        dir_.zeros(diff_.size());
-    } else {
-        dir_ = diff_ / length_;
-    }
+    Eigen::VectorXd diff_lin = end_point_.getLocation() - start_point_.getLocation();
+    Eigen::Quaterniond diff_ang = utility::quatDiff(start_point_.getOrientation(), end_point_.getOrientation());
+    Frame diff_frame(diff_lin, diff_ang);
+    setDifference(diff_frame);
+
+    setAngularDistance(start_point_.getOrientation().angularDistance(end_point_.getOrientation()));
 }
 
 const Phase& Section::getPhaseByTime(double time) const

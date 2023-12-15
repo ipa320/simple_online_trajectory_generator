@@ -22,20 +22,20 @@ namespace detail {
         double duration_;
         double start_time_;
 
-        Point start_point_;
-        Point end_point_;
+        Frame start_point_;
+        Frame end_point_;
 
         int id_;
 
     public:
         virtual void calcPosAndVel([[maybe_unused]] double t_section, [[maybe_unused]] double t_segment,
-                                   Point& pos, Point& vel, const KinematicSolver& solver) const = 0;
+                                   Frame& pos, Frame& vel, const KinematicSolver& solver) const = 0;
 
         void setDuration(double duration) { duration_ = duration; }
         void setStartTime(double t_start) { start_time_ = t_start; }
 
-        void setStartPoint(const Point& p) { start_point_ = p; }
-        void setEndPoint(const Point& p) { end_point_ = p; }
+        void setStartPoint(const Frame& p) { start_point_ = p; }
+        void setEndPoint(const Frame& p) { end_point_ = p; }
 
         void setID(int num) { id_ = num; }
 
@@ -43,8 +43,8 @@ namespace detail {
         double getDuration() const { return duration_; }
         double getEndTime() const { return start_time_ + duration_; }
 
-        const Point& getStartPoint() const { return start_point_; }
-        const Point& getEndPoint() const { return end_point_; }
+        const Frame& getStartPoint() const { return start_point_; }
+        const Frame& getEndPoint() const { return end_point_; }
 
         int getID() const { return id_; }
 

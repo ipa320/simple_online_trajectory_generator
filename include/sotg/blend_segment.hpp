@@ -36,11 +36,11 @@ namespace detail {
         {
         }
 
-        void calcPosAndVel([[maybe_unused]] double t_section, [[maybe_unused]] double t_segment, Point& pos,
-                           Point& vel, const KinematicSolver& solver) const override;
+        void calcPosAndVel([[maybe_unused]] double t_section, [[maybe_unused]] double t_segment, Frame& pos,
+                           Frame& vel, const KinematicSolver& solver) const override;
 
-        const Point& getPreBlendDirection() const { return pre_section_.getDirection(); }
-        const Point& getPostBlendDirection() const { return post_section_.getDirection(); }
+        const Frame& getPreBlendDirection() const { return pre_section_.getDirection(); }
+        const Frame& getPostBlendDirection() const { return post_section_.getDirection(); }
 
         void setPreBlendVelocityMagnitude(double value) { pre_velocity_magnitude_ = value; }
         void setPostBlendVelocityMagnitude(double value) { post_velocity_magnitude_ = value; }
@@ -51,15 +51,15 @@ namespace detail {
         void setDuration(double duration) { duration_ = duration; }
         void setStartTime(double t_start) { start_time_ = t_start; }
 
-        void setStartPoint(const Point& p) { start_point_ = p; }
-        void setEndPoint(const Point& p) { end_point_ = p; }
+        void setStartPoint(Frame p) { start_point_ = p; }
+        void setEndPoint(Frame p) { end_point_ = p; }
 
         double getStartTime() const { return start_time_; }
         double getDuration() const { return duration_; }
         double getEndTime() const { return start_time_ + duration_; }
 
-        const Point& getStartPoint() const { return start_point_; }
-        const Point& getEndPoint() const { return end_point_; }
+        const Frame& getStartPoint() const { return start_point_; }
+        const Frame& getEndPoint() const { return end_point_; }
 
         Section& getPreBlendSection() const override { return pre_section_; };
         Section& getPostBlendSection() const override { return post_section_; };

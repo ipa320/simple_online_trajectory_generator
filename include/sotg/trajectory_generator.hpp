@@ -27,7 +27,7 @@ public:
     TrajectoryGenerator();
 
     double getDuration();
-    void calcPositionAndVelocity(double time, Point& pos, Point& vel, int& id, bool disable_blending = false);
+    void calcPositionAndVelocity(double time, Frame& pos, Frame& vel, int& id, bool disable_blending = false);
     void resetPath(Path path, std::vector<SectionConstraint> section_constraints,
                    std::vector<SegmentConstraint> segment_constraints);
 
