@@ -15,23 +15,22 @@
 namespace SOTG {
 
 // Wraps std::vector and allows vector arithmetic, stores information about the unit of a particular value
-class Frame {
+class Pose {
 private:
     Eigen::VectorXd location_;
     Eigen::Quaterniond orientation_;
 
 public:
-    Frame();
-    Frame(std::vector<Eigen::VectorXd> vec_list);
-    Frame(Eigen::VectorXd& vec);
-    Frame(Eigen::VectorXd lin, Eigen::Quaterniond ang);
+    Pose();
+    Pose(const Eigen::VectorXd& loc, const Eigen::Quaterniond& rot);
 
-    Frame diff(const Frame& f2) const;
+    Pose diff(const Pose& f2) const;
     const Eigen::VectorXd& getLocation() const { return location_; }
     const Eigen::Quaterniond& getOrientation() const { return orientation_; }
     void setLocation(const Eigen::VectorXd& location) { location_ = location; }
-    void setOrientation(const Eigen::VectorXd& orientation) { orientation_ = orientation; }
-    double getAngularDistance() const { }
+    void setOrientation(const Eigen::Quaterniond& orientation) { orientation_ = orientation; }
+
+    std::ostream& operator<<(std::ostream& out);
 };
 
 }  // namespace SOTG

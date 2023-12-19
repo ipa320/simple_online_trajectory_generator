@@ -1,5 +1,7 @@
 #include "sotg/constant_acceleration_solver.hpp"
 
+#include "sotg/pose.hpp"
+
 using namespace SOTG;
 using namespace detail;
 
@@ -22,7 +24,7 @@ void ConstantAccelerationSolver::projectLimitsOntoDoF(const Section& section, st
     double a_max_lin = section.getAccMaxLinear();
     double v_max_lin = section.getVelMaxLinear();
 
-    const Frame& diff = section.getDifference();
+    const Transform& diff = section.getTransform();
 
     const Eigen::Vector3d& diff_lin = diff.getLocation();
     Eigen::Vector3d dir_lin = diff_lin / diff_lin.norm();
@@ -65,7 +67,7 @@ void ConstantAccelerationSolver::calcPhaseTimeAndDistance(double& a_max, double&
     }
     acc_phase_single_dof.duration = T_acc;
     acc_phase_single_dof.length = L_acc;
-    acc_phase_single_dof.distance_p_start = 0.0;
+    acc_phase_single_dof.distance_start = 0.0;
 
     if (utility::nearlyZero(v_max)) {
         T_dec = 0.0;
@@ -85,9 +87,9 @@ void ConstantAccelerationSolver::calcPhaseTimeAndDistance(double& a_max, double&
     }
     coast_phase_single_dof.duration = T_coast;
     coast_phase_single_dof.length = L_coast;
-    coast_phase_single_dof.distance_p_start = L_acc;
+    coast_phase_single_dof.distance_start = L_acc;
 
-    dec_phase_single_dof.distance_p_start = L_acc + L_coast;
+    dec_phase_single_dof.distance_start = L_acc + L_coast;
 
     if (L_coast < 0.0 && !(std::abs(L_coast) < 1e-4)) {
         std::cout << "Warning::KinematicSolver: velocity should not be decreased in this step!" << std::endl;
@@ -155,9 +157,12 @@ void ConstantAccelerationSolver::calcTotalTimeAndDistanceSingleDoF(double& a_max
 
 void ConstantAccelerationSolver::calcTimesAndLengthsMultiDoF(
     Phase& acc_phase, Phase& coast_phase, Phase& dec_phase, std::vector<double>& total_time_per_dof,
-    std::vector<double>& total_length_per_dof, const Frame& diff, double angular_distance,
-    std::vector<double>& a_max_vec, std::vector<double>& v_max_vec)
+    std::vector<double>& total_length_per_dof, const Section& section, std::vector<double>& a_max_vec,
+    std::vector<double>& v_max_vec)
 {
+    const Transform& diff = section.getTransform();
+    const double angular_distance = diff.getAngularDistance();
+
     const Eigen::VectorXd& location = diff.getLocation();
     const Eigen::Quaterniond& orientation = diff.getOrientation();
 
@@ -175,13 +180,13 @@ void ConstantAccelerationSolver::calcTimesAndLengthsMultiDoF(
     }
 
     // orientation
-    constexpr size_t size_quat = 4;
     const Eigen::Vector3d& orientation_dir = orientation.vec();
     for (Eigen::Index i = 0; i < orientation_dir.size(); ++i) {
         double total_length_dof = std::abs(orientation_dir[i]);
         double total_time_dof = 0.0;
 
-        calcTotalTimeAndDistanceSingleDoF(a_max_vec[i], v_max_vec[i], total_length_dof, total_time_dof);
+        calcTotalTimeAndDistanceSingleDoF(a_max_vec[location.size() + i], v_max_vec[location.size() + i],
+                                          total_length_dof, total_time_dof);
 
         total_time_per_dof.push_back(total_time_dof);
         total_length_per_dof.push_back(total_length_dof);
@@ -248,13 +253,10 @@ void ConstantAccelerationSolver::calcTimesAndLengthsMultiDoF(
     }
 }
 
-Section ConstantAccelerationSolver::calcSection(Frame& p_start_ref, Frame& p_end_ref,
+Section ConstantAccelerationSolver::calcSection(Pose& p_start_ref, Pose& p_end_ref,
                                                 SectionConstraint constraint_copy, size_t section_id)
 {
     Section section(p_start_ref, p_end_ref, constraint_copy, section_id);
-
-    const Frame& diff = section.getDifference();
-    double angular_distance = section.getAngularDistance();
 
     std::vector<Phase> phases;
     Phase acc_phase, coast_phase, dec_phase;
@@ -266,8 +268,8 @@ Section ConstantAccelerationSolver::calcSection(Frame& p_start_ref, Frame& p_end
     std::vector<double> reduced_acceleration_per_dof, reduced_velocity_per_dof;
 
     projectLimitsOntoDoF(section, reduced_acc_per_dof_lin, reduced_vel_per_dof_lin);
-    calcTimesAndLengthsMultiDoF(acc_phase, coast_phase, dec_phase, total_time_per_dof, total_length_per_dof, diff,
-                                angular_distance, reduced_acceleration_per_dof, reduced_velocity_per_dof);
+    calcTimesAndLengthsMultiDoF(acc_phase, coast_phase, dec_phase, total_time_per_dof, total_length_per_dof,
+                                section, reduced_acceleration_per_dof, reduced_velocity_per_dof);
 
     int index_slowest_dof = findIndexOfMax(total_time_per_dof);
     double T_total = total_time_per_dof[index_slowest_dof];
@@ -281,13 +283,13 @@ Section ConstantAccelerationSolver::calcSection(Frame& p_start_ref, Frame& p_end
     coast_phase.type = PhaseType::ConstantVelocity;
     coast_phase.t_start = acc_phase.duration;
     coast_phase.length = calcPhaseLength(coast_phase);
-    coast_phase.distance_p_start = acc_phase.length;
+    coast_phase.distance_start = acc_phase.length;
     phases.push_back(coast_phase);
 
     dec_phase.type = PhaseType::ConstantDeacceleration;
     dec_phase.t_start = coast_phase.duration + coast_phase.t_start;
     dec_phase.length = calcPhaseLength(dec_phase);
-    dec_phase.distance_p_start = coast_phase.distance_p_start + coast_phase.length;
+    dec_phase.distance_start = coast_phase.distance_start + coast_phase.length;
     phases.push_back(dec_phase);
 
     section.setPhases(phases);
@@ -626,12 +628,13 @@ void ConstantAccelerationSolver::calcPosAndVelSingleDoFLinear(double section_dof
 }
 
 void ConstantAccelerationSolver::calcVelAndTimeByDistance(const Section& section, double distance,
-                                                          Frame& velocity_per_dof, double& t_abs)
+                                                          std::vector<double>& velocity_per_dof, double& t_abs)
 {
-    const Transform& dir = section.getTransform();  // make this work equivalent to getting the dir
-    const Eigen::VectorXd& dir_lin = dir.getLocation();
-    const Eigen::VectorXd& dir_ang = dir.getOrientation().vec();
-    double angular_distance = dir.getAngularDistance();
+    const Transform& diff = section.getTransform();  // make this work equivalent to getting the dir
+    const Eigen::VectorXd& diff_lin = diff.getLocation();
+    const Eigen::VectorXd& dir_lin = diff_lin / diff_lin.norm();
+    const Eigen::VectorXd& dir_ang = diff.getOrientation().vec();
+    double angular_distance = diff.getAngularDistance();
 
     std::vector<double> a_max_vec = section.getAdaptedAcceleration();
     std::vector<double> v_max_vec = section.getAdaptedVelocity();
@@ -643,9 +646,9 @@ void ConstantAccelerationSolver::calcVelAndTimeByDistance(const Section& section
     for (size_t i = 0; i < phase.components.size(); ++i) {
         double distance_dof;
         if (i < dir_lin.size()) {
-            distance_dof = std::abs(dir_lin[i]) * distance - phase.components[i].distance_p_start;
+            distance_dof = std::abs(dir_lin[i]) * distance - phase.components[i].distance_start;
         } else {
-            distance_dof = std::abs(dir_ang[i]) * angular_distance - phase.components[i].angular_distance_p_start;
+            distance_dof = std::abs(dir_ang[i]) * angular_distance - phase.components[i].angular_distance_start;
         }
 
         if (phase.type == PhaseType::ConstantAcceleration) {
@@ -682,17 +685,22 @@ void ConstantAccelerationSolver::calcVelAndTimeByDistance(const Section& section
     // calculate velocity per dof at time when distance is reached
 
     double section_length = section.getLength();
-    for (size_t i = 0; i < dir.size(); ++i) {
-        double section_dof_length = dir[i] * section_length;
+    for (size_t i = 0; i < dir_lin.size() + dir_ang.size(); ++i) {
+        double section_dof_length;
+        if (i < dir_lin.size()) {
+            section_dof_length = dir_lin[i] * section_length;
+        } else {
+            section_dof_length = dir_ang[i] * angular_distance;
+        }
         double _, velocity;
-        calcPosAndVelSingleDoFLinear(section_dof_length, phase, phase.components[i].distance_p_start, t_phase,
+        calcPosAndVelSingleDoFLinear(section_dof_length, phase, phase.components[i].distance_start, t_phase,
                                      a_max_vec[i], v_max_vec[i], _, velocity);
-        velocity_per_dof.addValue(velocity);
+        velocity_per_dof.push_back(velocity);
     }
 }
 
 void ConstantAccelerationSolver::calcPosAndVelLinearSegment(double t_section, const LinearSegment& segment,
-                                                            Frame& pos, Frame& vel) const
+                                                            Pose& pos, Pose& vel) const
 {
     const Section& section = segment.getSection();
 
@@ -721,34 +729,55 @@ void ConstantAccelerationSolver::calcPosAndVelLinearSegment(double t_section, co
 //     vel.setOrientationIndex(dir_AB.getOrientationIndex());
 // }
 
-void ConstantAccelerationSolver::calcPosAndVelSection(double t_section, const Section& section, Frame& pos,
-                                                      Frame& vel) const
+// Eigen::Quaterniond deltaRotation(const Eigen::Vector3d& dir, double delta_time)
+// {
+//     Eigen::Vector3d ha = dir * delta_time * 0.5;
+//     double l = ha.norm();
+//     if (l > 0) {
+//         ha *= sin(l) / l;
+//         return Eigen::Quaterniond(cos(1), ha.x(), ha.y(), ha.z());
+//     } else {
+//         return Eigen::Quaterniond(1.0, ha.x(), ha.y(), ha.z());
+//     }
+// }
+
+void ConstantAccelerationSolver::calcPosAndVelSection(double t_section, const Section& section, Pose& pos,
+                                                      Pose& vel) const
 {
-    const Frame& p_start = section.getStartFrame();
-    const Frame& p_end = section.getEndFrame();
-    const Frame& diff = section.getTransform();
+    const Pose& p_start = section.getStartPose();
+    const Pose& p_end = section.getEndPose();
+    const Transform& transform = section.getTransform();
+    const Eigen::Vector3d& diff_lin = transform.getLocation();
+    Eigen::Vector3d dir_ang = transform.getOrientation().vec();
+    double angular_distance = transform.getAngularDistance();
 
-    const std::vector<double>& a_max_vec = section.getAdaptedAcceleration();
-    const std::vector<double>& v_max_vec = section.getAdaptedVelocity();
-
-    Eigen::VectorXd pos_lin, pos_ang, vel_lin, vel_ang;
+    const Eigen::VectorXd& a_max_lin = section.getAccMaxLinearAdapted();
+    const Eigen::Vector3d& a_max_rot = section.getAccMaxAngularAdapted();
+    const Eigen::VectorXd& v_max_lin = section.getVelMaxLinearAdapted();
+    const Eigen::Vector3d& v_max_rot = section.getVelMaxAngularAdapted();
 
     const Phase& phase = section.getPhaseByTime(t_section);
     double t_phase = t_section - phase.t_start;
-    for (size_t i = 0; i < p_start.size(); i++) {
-        double pos_relative_magnitude, vel_magnitude;
-        calcPosAndVelSingleDoFLinear(std::abs(diff[i]), phase, phase.components[i].distance_p_start, t_phase,
-                                     a_max_vec[i], v_max_vec[i], pos_relative_magnitude, vel_magnitude);
 
-        double pos_component = p_start[i] + pos_relative_magnitude * diff[i];
-        double vel_component = vel_magnitude * utility::sign(diff[i]);
+    // calc location
 
-        pos_lin.addValue(pos_component);
-        vel_lin.addValue(vel_component);
-    }
+    double lin_rel_mag, lin_vel_rel_mag;
+    calcPosAndVelSingleDoFLinear(section.getLength(), phase, phase.distance_start, t_phase, a_max_lin.norm(),
+                                 v_max_lin.norm(), lin_rel_mag, lin_vel_rel_mag);
 
-    pos.setLocation();
-    pos.setOrientation();
-    vel.setLocation();
-    vel.setOrientation();
+    Eigen::VectorXd position = p_start.getLocation() + lin_rel_mag * diff_lin;
+    Eigen::VectorXd velocity = lin_vel_rel_mag * diff_lin;
+    pos.setLocation(position);
+    vel.setLocation(velocity);
+
+    // calc orientation
+
+    double ang_rel_mag, ang_vel_rel_mag;
+    calcPosAndVelSingleDoFLinear(angular_distance, phase, phase.angular_distance_start, t_phase, a_max_rot.norm(),
+                                 v_max_rot.norm(), ang_rel_mag, ang_vel_rel_mag);
+    Eigen::Quaterniond orientation = p_start.getOrientation().slerp(ang_rel_mag, p_end.getOrientation());
+    Eigen::Vector3d ang_vel = dir_ang * ang_vel_rel_mag;
+    Eigen::Quaterniond orientation_velocity(0.0, ang_vel.x(), ang_vel.y(), ang_vel.z());
+    pos.setOrientation(orientation);
+    vel.setOrientation(orientation_velocity);
 }

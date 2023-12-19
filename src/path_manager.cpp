@@ -37,38 +37,38 @@ void PathManager::resetSections()
     }
 }
 
-void PathManager::generateBlendSegments()
-{
-    // Iterate over all corners that could be blended
-    // std::iterator is neccesary because of std::list
-    // If sections was a vector instead of a list the code would look like this:
-    //
-    // for( size_t i = 1; i < sections.size(); ++i)
-    // {
-    //      ...
-    //      Segment blend_segment = kinematic_solver_->calcSegment(sections[i-1], sections[i], ...);
-    //      ...
-    // }
+// void PathManager::generateBlendSegments()
+// {
+//     // Iterate over all corners that could be blended
+//     // std::iterator is neccesary because of std::list
+//     // If sections was a vector instead of a list the code would look like this:
+//     //
+//     // for( size_t i = 1; i < sections.size(); ++i)
+//     // {
+//     //      ...
+//     //      Segment blend_segment = kinematic_solver_->calcSegment(sections[i-1], sections[i], ...);
+//     //      ...
+//     // }
 
-    int blend_corner_index = 0;
-    size_t blend_segment_id = 1;
-    std::list<Section>::iterator it = sections_.begin();
-    Section* last_section_addr = &(*it);
-    for (++it; it != sections_.end(); ++it) {
-        SegmentConstraint segment_constraint = segment_constraints_[blend_corner_index];
+//     int blend_corner_index = 0;
+//     size_t blend_segment_id = 1;
+//     std::list<Section>::iterator it = sections_.begin();
+//     Section* last_section_addr = &(*it);
+//     for (++it; it != sections_.end(); ++it) {
+//         SegmentConstraint segment_constraint = segment_constraints_[blend_corner_index];
 
-        Section* current_section_addr = &(*it);
-        std::map<std::string, double> debug_info;
-        std::shared_ptr<BlendSegment> blend_segment = kinematic_solver_->calcBlendSegment(
-            *last_section_addr, *current_section_addr, segment_constraint, blend_segment_id, debug_info);
-        last_section_addr = current_section_addr;
-        ++blend_corner_index;
-        blend_segment_id += 2;  // There is always one linear Segment in between
+//         Section* current_section_addr = &(*it);
+//         std::map<std::string, double> debug_info;
+//         std::shared_ptr<BlendSegment> blend_segment = kinematic_solver_->calcBlendSegment(
+//             *last_section_addr, *current_section_addr, segment_constraint, blend_segment_id, debug_info);
+//         last_section_addr = current_section_addr;
+//         ++blend_corner_index;
+//         blend_segment_id += 2;  // There is always one linear Segment in between
 
-        segments_.push_back(blend_segment);
-        debug_info_vec_.push_back(debug_info);
-    }
-}
+//         segments_.push_back(blend_segment);
+//         debug_info_vec_.push_back(debug_info);
+//     }
+// }
 
 void PathManager::generateLinearSegments()
 {
@@ -128,7 +128,7 @@ void PathManager::resetSegments()
 {
     segments_.clear();
 
-    generateBlendSegments();
+    // generateBlendSegments();
 
     generateLinearSegments();
 }

@@ -40,6 +40,7 @@ namespace detail {
 
         double t_start = 0.0;
         double distance_start = 0.0;
+        double angular_distance_start = 0.0;
 
         PhaseType type;
     };

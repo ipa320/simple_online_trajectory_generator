@@ -7,7 +7,7 @@
 #include "sotg/kinematic_solver.hpp"
 #include "sotg/path.hpp"
 #include "sotg/path_manager.hpp"
-#include "sotg/point.hpp"
+#include "sotg/pose.hpp"
 #include "sotg/section.hpp"
 #include "sotg/section_constraint.hpp"
 #include "sotg/segment_constraint.hpp"
@@ -27,7 +27,7 @@ public:
     TrajectoryGenerator();
 
     double getDuration();
-    void calcPositionAndVelocity(double time, Frame& pos, Frame& vel, int& id, bool disable_blending = false);
+    void calcPositionAndVelocity(double time, Pose& pos, Pose& vel, int& id, bool disable_blending = true);
     void resetPath(Path path, std::vector<SectionConstraint> section_constraints,
                    std::vector<SegmentConstraint> segment_constraints);
 

@@ -6,7 +6,7 @@
 
 #include <eigen3/Eigen/Core>
 
-#include "sotg/point.hpp"
+#include "sotg/pose.hpp"
 
 namespace SOTG {
 
@@ -14,17 +14,16 @@ namespace SOTG {
 // quickly setup many new waypoints
 class Path {
 private:
-    std::vector<Frame> waypoints_;
+    std::vector<Pose> waypoints_;
 
 public:
-    void addPoint(Frame point);
-    void addPoint(const std::vector<Eigen::VectorXd>& old_point);
-    void addPoint(const std::vector<std::vector<double>>& old_point);
+    void addPoint(const Pose& pose);
+    void addPoint(const Eigen::VectorXd& loc, const Eigen::Quaterniond& rot);
     size_t getNumWaypoints() { return waypoints_.size(); };
-    Frame& getPoint(size_t index);
+    Pose& getPoint(size_t index);
 
-    std::vector<Frame>::iterator begin() { return waypoints_.begin(); }
-    std::vector<Frame>::iterator end() { return waypoints_.end(); }
+    std::vector<Pose>::iterator begin() { return waypoints_.begin(); }
+    std::vector<Pose>::iterator end() { return waypoints_.end(); }
 
     std::ostream& operator<<(std::ostream& out);
 };

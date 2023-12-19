@@ -23,21 +23,21 @@ namespace detail {
         {
         }
 
-        void calcPosAndVel([[maybe_unused]] double t_section, [[maybe_unused]] double t_segment, Frame& pos,
-                           Frame& vel, const KinematicSolver& solver) const override;
+        void calcPosAndVel([[maybe_unused]] double t_section, [[maybe_unused]] double t_segment, Pose& pos,
+                           Pose& vel, const KinematicSolver& solver) const override;
 
         void setDuration(double duration) { duration_ = duration; }
         void setStartTime(double t_start) { start_time_ = t_start; }
 
-        void setStartPoint(const Frame& p) { start_point_ = p; }
-        void setEndPoint(const Frame& p) { end_point_ = p; }
+        void setStartPoint(const Pose& p) { start_point_ = p; }
+        void setEndPoint(const Pose& p) { end_point_ = p; }
 
         double getStartTime() const { return start_time_; }
         double getDuration() const { return duration_; }
         double getEndTime() const { return start_time_ + duration_; }
 
-        const Frame& getStartPoint() const { return start_point_; }
-        const Frame& getEndPoint() const { return end_point_; }
+        const Pose& getStartPoint() const { return start_point_; }
+        const Pose& getEndPoint() const { return end_point_; }
 
         Section& getSection() const override { return section_; }
     };

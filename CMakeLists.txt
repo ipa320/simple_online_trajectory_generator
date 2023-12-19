@@ -26,7 +26,7 @@ add_library(${PROJECT_NAME} SHARED
   src/trajectory_generator.cpp
   src/constant_acceleration_solver.cpp
   src/path_manager.cpp
-  src/point.cpp
+  src/pose.cpp
   src/path.cpp
   src/section_constraint.cpp
   src/section.cpp

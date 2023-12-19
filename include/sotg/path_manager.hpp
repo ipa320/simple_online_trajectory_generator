@@ -33,7 +33,7 @@ namespace detail {
 
         void resetSections();
         void resetSegments();
-        void generateBlendSegments();
+        // void generateBlendSegments();
         void generateLinearSegments();
 
     public:

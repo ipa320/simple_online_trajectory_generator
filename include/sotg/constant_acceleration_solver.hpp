@@ -9,6 +9,7 @@
 #include "sotg/blend_segment.hpp"
 #include "sotg/kinematic_solver.hpp"
 #include "sotg/linear_segment.hpp"
+#include "sotg/pose.hpp"
 #include "sotg/section.hpp"
 #include "sotg/segment_constraint.hpp"
 #include "sotg/utility_functions.hpp"
@@ -36,51 +37,50 @@ namespace detail {
 
         void calcTimesAndLengthsMultiDoF(Phase& acc_phase, Phase& coast_phase, Phase& dec_phase,
                                          std::vector<double>& total_time_per_dof,
-                                         std::vector<double>& total_length_per_dof, const Frame& diff,
-                                         double angular_distance, std::vector<double>& a_max_vec,
-                                         std::vector<double>& v_max_vec);
+                                         std::vector<double>& total_length_per_dof, const Section& section,
+                                         std::vector<double>& a_max_vec, std::vector<double>& v_max_vec);
 
-        void calcSecondBlendingDist(double T_blend, double T_acc_post, double a_max_magnitude_post,
-                                    double vel_pre_blend_magnitude, double blending_dist_pre,
-                                    double& blending_dist_post, size_t segment_id);
+        // void calcSecondBlendingDist(double T_blend, double T_acc_post, double a_max_magnitude_post,
+        //                             double vel_pre_blend_magnitude, double blending_dist_pre,
+        //                             double& blending_dist_post, size_t segment_id);
 
         void calcPosAndVelSingleDoFLinear(double section_length, const Phase& phase,
                                           double phase_distance_to_p_start, double t_phase, double a_max_reduced,
                                           double v_max_reduced, double& pos_magnitude,
                                           double& vel_magnitude) const;
-        void calcVelAndTimeByDistance(const Section& section, double distance, Frame& velocity_per_dof,
-                                      double& time_when_distance_is_reached);
+        void calcVelAndTimeByDistance(const Section& section, double distance,
+                                      std::vector<double>& velocity_per_dof, double& t_abs);
 
-        void calcPreBlendParams(double blending_dist_pre, const Section& pre_section, Frame& A_blend,
-                                double& T_blend, double& vel_pre_blend_magnitude,
-                                double& absolute_blend_start_time);
+        // void calcPreBlendParams(double blending_dist_pre, const Section& pre_section, Pose& A_blend,
+        //                         double& T_blend, double& vel_pre_blend_magnitude,
+        //                         double& absolute_blend_start_time);
 
-        void calcPostBlendParams(double blending_dist_pre, const Section& pre_section, Frame& C_blend,
-                                 double& T_blend, double& vel_pre_blend_magnitude, double& t_abs_start_blend);
+        // void calcPostBlendParams(double blending_dist_pre, const Section& pre_section, Pose& C_blend,
+        //                          double& T_blend, double& vel_pre_blend_magnitude, double& t_abs_start_blend);
 
-        bool isBlendAccelerationTooHigh(const std::vector<double>& a_max, const double& T_blend,
-                                        const double& vel_pre_blend_magnitude,
-                                        const double& vel_post_blend_magnitude, const Section& pre_section,
-                                        const Section& post_section, size_t segment_id);
-        void setNoBlendingParams(const Section& pre_section, const Section& post_section, double& T_blend,
-                                 double& absolute_blend_start_time_with_shift,
-                                 double& absolute_blend_end_time_without_shift, Frame& A_blend, Frame& C_blend,
-                                 double& vel_pre_blend_magnitude, double& vel_post_blend_magnitude);
+        // bool isBlendAccelerationTooHigh(const std::vector<double>& a_max, const double& T_blend,
+        //                                 const double& vel_pre_blend_magnitude,
+        //                                 const double& vel_post_blend_magnitude, const Section& pre_section,
+        //                                 const Section& post_section, size_t segment_id);
+        // void setNoBlendingParams(const Section& pre_section, const Section& post_section, double& T_blend,
+        //                          double& absolute_blend_start_time_with_shift,
+        //                          double& absolute_blend_end_time_without_shift, Pose& A_blend, Pose& C_blend,
+        //                          double& vel_pre_blend_magnitude, double& vel_post_blend_magnitude);
 
     public:
-        Section calcSection(Frame& p_start_ref, Frame& p_end_ref, SectionConstraint constraint_copy,
+        Section calcSection(Pose& p_start_ref, Pose& p_end_ref, SectionConstraint constraint_copy,
                             size_t section_id) override;
-        std::shared_ptr<BlendSegment> calcBlendSegment(Section& pre_section, Section& post_section,
-                                                       const SegmentConstraint& constraint, size_t segment_id,
-                                                       std::map<std::string, double>& debug_output) override;
+        // std::shared_ptr<BlendSegment> calcBlendSegment(Section& pre_section, Section& post_section,
+        //                                                const SegmentConstraint& constraint, size_t segment_id,
+        //                                                std::map<std::string, double>& debug_output) override;
 
-        void calcPosAndVelSection(double t_section, const Section& section, Frame& pos, Frame& vel) const override;
+        void calcPosAndVelSection(double t_section, const Section& section, Pose& pos, Pose& vel) const override;
 
-        void calcPosAndVelLinearSegment(double t_section, const LinearSegment& segment, Frame& pos,
-                                        Frame& vel) const override;
+        void calcPosAndVelLinearSegment(double t_section, const LinearSegment& segment, Pose& pos,
+                                        Pose& vel) const override;
 
-        void calcPosAndVelBlendSegment(double t_segment, const BlendSegment& segment, Frame& pos,
-                                       Frame& vel) const override;
+        // void calcPosAndVelBlendSegment(double t_segment, const BlendSegment& segment, Pose& pos,
+        //                                Pose& vel) const override;
     };
 }  // namespace detail
 }  // namespace SOTG

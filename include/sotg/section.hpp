@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "sotg/phase.hpp"
-#include "sotg/point.hpp"
+#include "sotg/pose.hpp"
 #include "sotg/section_constraint.hpp"
 #include "sotg/transform.hpp"
 
@@ -15,8 +15,8 @@ namespace detail {
     // Stores kinematic states for position and velocity calculations along this sectionin inside of phases
     class Section {
     private:
-        Frame& start_point_;
-        Frame& end_point_;
+        Pose& start_pose_;
+        Pose& end_pose_;
         Transform transform_;
         double length_;
         SectionConstraint constraint_;
@@ -27,6 +27,10 @@ namespace detail {
 
         std::vector<double> adapted_acceleration_;
         std::vector<double> adapted_velocity_;
+        Eigen::VectorXd adapted_acc_max_linear_;
+        Eigen::Vector3d adapted_acc_max_angular_;
+        Eigen::VectorXd adapted_vel_max_linear_;
+        Eigen::Vector3d adapted_vel_max_angular_;
 
         double duration_ = 0.0;
         double start_time_ = 0.0;
@@ -37,8 +41,8 @@ namespace detail {
         double time_shift_ = 0.0;
 
     public:
-        const Frame& getStartFrame() const { return start_point_; }
-        const Frame& getEndFrame() const { return end_point_; }
+        const Pose& getStartPose() const { return start_pose_; }
+        const Pose& getEndPose() const { return end_pose_; }
 
         double getAccMaxLinear() const { return constraint_.getAccelerationMagnitudeLinear(); }
         double getAccMaxAngular() const { return constraint_.getAccelerationMagnitudeAngular(); }
@@ -50,7 +54,7 @@ namespace detail {
         void setLength(double length) { length_ = length; }
         void setTransform(const Transform& transform) { transform_ = transform; }
 
-        Section(Frame& p_start_ref, Frame& p_end_ref, SectionConstraint constraint_copy, size_t section_id);
+        Section(Pose& p_start_ref, Pose& p_end_ref, SectionConstraint constraint_copy, size_t section_id);
 
         void setIndexSlowestDoF(int index) { index_slowest_dof_ = index; }
 
@@ -61,6 +65,12 @@ namespace detail {
 
         const std::vector<double>& getAdaptedAcceleration() const { return adapted_acceleration_; }
         const std::vector<double>& getAdaptedVelocity() const { return adapted_velocity_; }
+
+        const Eigen::VectorXd& getAccMaxLinearAdapted() const { return adapted_acc_max_linear_; }
+        const Eigen::Vector3d& getAccMaxAngularAdapted() const { return adapted_acc_max_angular_; }
+        const Eigen::VectorXd& getVelMaxLinearAdapted() const { return adapted_vel_max_linear_; }
+        const Eigen::Vector3d& getVelMaxAngularAdapted() const { return adapted_vel_max_angular_; }
+
         void setAdaptedAcceleration(const std::vector<double>& new_adapted_acceleration)
         {
             adapted_acceleration_ = new_adapted_acceleration;
