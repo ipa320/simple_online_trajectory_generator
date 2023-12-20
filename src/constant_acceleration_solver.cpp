@@ -619,7 +619,7 @@ void ConstantAccelerationSolver::calcPosAndVelSingleDoFLinear(double section_dof
     } else if (phase.type == PhaseType::ConstantVelocity) {
         p_i = v_max_reduced * t_phase + phase_distance_to_p_start;
         v_i = v_max_reduced;
-    } else {  // deacceleration
+    } else if (phase.type == PhaseType::ConstantDeacceleration) {
         p_i = -0.5 * a_max_reduced * std::pow(t_phase, 2) + v_max_reduced * t_phase + phase_distance_to_p_start;
         v_i = -a_max_reduced * t_phase + v_max_reduced;
     }
@@ -627,8 +627,8 @@ void ConstantAccelerationSolver::calcPosAndVelSingleDoFLinear(double section_dof
         pos = 0;
     } else {
         pos = p_i / section_dof_length;
-        vel = v_i;
     }
+    vel = v_i;
 }
 
 void ConstantAccelerationSolver::calcVelAndTimeByDistance(const Section& section, double distance,
