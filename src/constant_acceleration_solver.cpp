@@ -612,7 +612,7 @@ void ConstantAccelerationSolver::calcPosAndVelSingleDoFLinear(double section_dof
                                                               double a_max_reduced, double v_max_reduced,
                                                               double& pos, double& vel) const
 {
-    double p_i, v_i;
+    double p_i {0}, v_i {0};
     if (phase.type == PhaseType::ConstantAcceleration) {
         p_i = 0.5 * a_max_reduced * std::pow(t_phase, 2);
         v_i = a_max_reduced * t_phase;
