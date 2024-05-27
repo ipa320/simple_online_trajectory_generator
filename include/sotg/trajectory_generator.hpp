@@ -32,6 +32,7 @@ public:
     TrajectoryGenerator(const Logger& logger);
 
     double getDuration();
+    int getNumPassedWaypoints(double tick);
     void calcPositionAndVelocity(double time, Point& pos, Point& vel, int& id, bool disable_blending = false);
     void resetPath(Path path, std::vector<SectionConstraint> section_constraints,
                    std::vector<SegmentConstraint> segment_constraints);

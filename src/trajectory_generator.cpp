@@ -38,7 +38,15 @@ double TrajectoryGenerator::getDuration()
     return total_time;
 }
 
-void TrajectoryGenerator::calcPositionAndVelocity(double time, Point& pos, Point& vel, int& id,
+int SOTG::TrajectoryGenerator::getNumPassedWaypoints(double tick)
+{
+    const Section& section = path_manager_->getSectionAtTime(tick);
+    const Point& section_start_point = section.getStartPoint();
+
+    Path& path = path_manager_->getPath();
+    return std::find(path.begin(), path.end(), section_start_point) - path.begin();
+}
+void TrajectoryGenerator::calcPositionAndVelocity(double time, Point &pos, Point &vel, int &id,
                                                   bool disable_blending)
 {
     if (disable_blending) {
