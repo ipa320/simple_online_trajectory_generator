@@ -19,6 +19,7 @@ class Point {
 private:
     std::vector<double> values_;
     int orientation_index_ = -1;
+    int id_ = -1;
 
 public:
     Point();
@@ -38,6 +39,9 @@ public:
     Point operator*(const double& scalar) const;
     double operator[](size_t index) const;
     double norm();
+
+    int getID() const { return id_; }
+    void setID(int id) { id_ = id; }
 
     Point getLocation();
     Point getOrientation();

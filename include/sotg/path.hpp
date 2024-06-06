@@ -21,21 +21,25 @@ public:
     void addPoint(const std::vector<Eigen::VectorXd>& old_point);
     void addPoint(const std::vector<std::vector<double>>& old_point);
     size_t getNumWaypoints() { return waypoints_.size(); };
-    Point& getPoint(size_t index) const;
+    Point& getPointReference(size_t index);
+    Point getPointValue(size_t index) const;
 
     size_t size() const { return waypoints_.size(); }
-    std::vector<Point>::iterator begin() { return waypoints_.begin(); }
-    std::vector<Point>::iterator end() { return waypoints_.end(); }
-    std::vector<Point>::iterator erase(const std::vector<Point>::iterator position) { return waypoints_.erase(position); }
-    std::vector<Point>::iterator erase(const std::vector<Point>::iterator first_elemet, const std::vector<Point>::iterator last_element) { return waypoints_.erase(first_elemet, last_element); }
+    std::vector<Point>::const_iterator begin() const { return waypoints_.begin(); }
+    std::vector<Point>::const_iterator end() const { return waypoints_.end(); }
+    std::vector<Point>::iterator erase(const std::vector<Point>::const_iterator position) { return waypoints_.erase(position); }
+    std::vector<Point>::iterator erase(const std::vector<Point>::const_iterator first_elemet, const std::vector<Point>::const_iterator last_element) { return waypoints_.erase(first_elemet, last_element); }
 
-    Path operator+(const Path& path)
-    {
-        for(int i = 0; i < path.size(); i++)
+    void print_ids() {
+        std::cout << "[";
+        for (size_t i = 0; i < waypoints_.size(); i++)
         {
-            addPoint(path.getPoint(i));
+            std::cout << waypoints_[i].getID() << ",";
         }
+        std::cout << "]" << std::endl;
     }
+
+    Path operator+(const Path& path);
 
     std::ostream& operator<<(std::ostream& out);
 };

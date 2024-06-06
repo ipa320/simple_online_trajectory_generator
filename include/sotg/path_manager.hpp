@@ -51,7 +51,7 @@ namespace detail {
         const Section& getSectionAtTime(double time);
         const Segment& getSegmentAtTime(double time);
 
-        Path& getPath() { return path_; }
+        const Path& getPath() { return path_; }
 
         std::ostream& operator<<(std::ostream& out);
     };

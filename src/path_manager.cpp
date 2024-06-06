@@ -19,7 +19,7 @@ void PathManager::resetSections()
     size_t num_sections = path_.getNumWaypoints() - 1;
     for (size_t i = 0; i < num_sections; i++) {
         Section section
-            = kinematic_solver_->calcSection(path_.getPoint(i), path_.getPoint(i + 1), section_constraints_[i], i);
+            = kinematic_solver_->calcSection(path_.getPointReference(i), path_.getPointReference(i + 1), section_constraints_[i], i);
 
         sections_.push_back(section);
     }
