@@ -46,3 +46,9 @@ install(TARGETS sotg DESTINATION lib)
 
 #add_definitions(-DDEBUG) #uncomment for additional debug output
 #add_definitions(-DVERBOSE_TESTS) # print all calculated values
+
+  #############
+  ## Testing ##
+  #############
+
+  add_executable(test test/test.cpp)
