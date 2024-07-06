@@ -30,10 +30,30 @@ public:
 
     std::vector<std::string>::iterator begin() { return symbols_.begin(); }
     std::vector<std::string>::iterator end() { return symbols_.end(); }
+    size_t size() const { return symbols_.size(); }
+
+    const std::vector<std::string>& getSymbols() const { return symbols_; }
+    size_t getIndex(std::string key);
+
+    std::string str() const;
 
     std::string operator[](size_t index) const { return symbols_[index]; }
+    bool operator==(const SymbolGroup& symbol_group) const;
+    bool operator!=(const SymbolGroup& symbol_group) const;
 
     bool is_quaternion = false;
+
+    friend std::ostream& operator<<(std::ostream& out, const SymbolGroup& sg)
+    {
+        out << "[";
+        for (auto& symbol : sg.symbols_) {
+            out << " " << symbol << ",";
+        }
+        out << "\b";
+        out << " ]";
+
+        return out;
+    }
 };
 
 using SymbolGroupMap = std::unordered_map<std::string, SymbolGroup>;

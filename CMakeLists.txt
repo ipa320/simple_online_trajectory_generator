@@ -34,6 +34,10 @@ add_library(${PROJECT_NAME} SHARED
   src/blend_segment.cpp
   src/segment_constraint.cpp
   src/utility_functions.cpp
+  src/value_group.cpp
+  src/symbol_group.cpp
+  src/point2.cpp
+  src/path2.cpp
 )
 
 target_link_libraries (${PROJECT_NAME} Eigen3::Eigen)

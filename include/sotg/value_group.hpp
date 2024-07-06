@@ -7,6 +7,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include <eigen3/Eigen/Core>
+#include <eigen3/Eigen/Geometry>
+
 #include "sotg/symbol_group.hpp"
 
 namespace SOTG {
@@ -20,24 +23,43 @@ namespace SOTG {
 
 class ValueGroup {
 private:
-    std::map<std::string, double> values_;
-    const SymbolGroup& symbols_;
+    SymbolGroup symbols_;
+
+    Eigen::VectorXd values_;
+    Eigen::Quaterniond quat_value_;
 
 public:
-    ValueGroup(const SymbolGroup& symbol_group)
+    ValueGroup(SymbolGroup symbol_group)
         : symbols_(symbol_group)
     {
+        values_ = Eigen::VectorXd{symbols_.size()};
     }
+    ValueGroup() { }
 
-    void operator=(std::initializer_list<double> list)
-    {
-        for (size_t i = 0; i < list.size(); i++) {
-            values_[symbols_[i]] = list.begin()[i];
-        }
-    }
-    double& operator[](std::string key) { return values_[key]; }
+    void operator=(std::initializer_list<double> list);
+    double& operator[](std::string key);
+    ValueGroup operator+(ValueGroup& value_group);
+    // ValueGroup operator-(ValueGroup& value_group);
+    // ValueGroup operator*(double scalar);
+
+    // should not be accessable
+    void setSymbols(SymbolGroup symbol_group) { symbols_ = symbol_group; }
+    const SymbolGroup& getSymbols() const { return symbols_; }
 
     bool is_quaternion = false;
+
+    friend std::ostream& operator<<(std::ostream& out, const ValueGroup& vg)
+    {
+        auto& symbols = vg.getSymbols();
+        out << "{";
+        for (size_t i = 0; i < vg.getSymbols().size(); i++) {
+            out << " " << symbols[i] << " : " << std::to_string(vg.values_[i]) << ",";
+        }
+        out << "\b";
+        out << " }";
+
+        return out;
+    }
 };
 
 using ValueGroupMap = std::unordered_map<std::string, ValueGroup>;
