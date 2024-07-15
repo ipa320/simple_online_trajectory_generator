@@ -24,11 +24,19 @@ private:
     std::string name_ = "ND";
 
 public:
-    Point2(SymbolGroupMap symbol_map, std::string name = "ND");
+    Point2(SymbolGroupMap symbol_map, std::string name = "ND")
+    {
+        name_ = name;
+
+        for (auto& [key, symbols] : symbol_map) {
+            value_groups_.insert({key, ValueGroup(symbols)});
+        }
+    }
+    Point2() = delete;
 
     std::string getName() { return name_; }
 
-    ValueGroup& operator[](std::string key) { return value_groups_[key]; }
+    ValueGroup& operator[](std::string key) { return value_groups_.at(key); }
 
     friend std::ostream& operator<<(std::ostream& out, const Point2& point)
     {

@@ -1,6 +1,8 @@
 
 #include "sotg/value_group.hpp"
 
+#include <string>
+
 using namespace SOTG;
 
 void ValueGroup::operator=(std::initializer_list<double> list)
@@ -9,22 +11,45 @@ void ValueGroup::operator=(std::initializer_list<double> list)
         throw std::runtime_error("Amount of symbols and values does not match");
     }
 
-    if (symbols_.is_quaternion != true) {
-        for (size_t i = 0; i < list.size(); i++) {
-            values_[i] = list.begin()[i];
-        }
-    } else {
-        quat_value_ = Eigen::Quaterniond{list.begin()[0], list.begin()[1], list.begin()[2], list.begin()[3]};
+    for (size_t i = 0; i < list.size(); i++) {
+        values_(i) = list.begin()[i];
     }
 }
 
+void ValueGroup::operator=(Eigen::Quaterniond quat)
+{
+    if (symbols_.size() != 4) {
+        throw std::runtime_error("A quaternion requires 4 Symbols, " + std::to_string(symbols_.size())
+                                 + " provided");
+    }
+
+    quat_values_ = quat;
+    is_quaternion_ = true;
+}
 double& ValueGroup::operator[](std::string key)
 {
     size_t index = symbols_.getIndex(key);
     if (!symbols_.is_quaternion) {
         return values_[index];
     } else {
-        // ToDo implement this
+        switch (index) {
+        case 0:
+            return quat_values_.w();
+            break;
+        case 1:
+            return quat_values_.x();
+            break;
+        case 2:
+            return quat_values_.y();
+            break;
+        case 3:
+            return quat_values_.z();
+            break;
+        default:
+            throw std::runtime_error("Requested symbol: \"" + key + "\" with index: " + std::to_string(index)
+                                     + " but quaternions only have 4 components");
+            break;
+        }
     }
 }
 

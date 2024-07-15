@@ -1,6 +1,5 @@
 #include <iostream>
 
-#include "sotg/point2.hpp"
 #include "sotg/sotg.hpp"
 
 int main()
@@ -10,14 +9,14 @@ int main()
     symbol_map["rot"] = {"a", "b", "c"};
 
     SOTG::Point2 p1(symbol_map, "p1");
-    // p1["pos"] = {0.0, 0.0, 0.0};
-    // p1["rot"] = {0.0, 0.0, 0.0};
+    p1["pos"] = {0.0, 0.0, 0.0};
+    p1["rot"] = {0.0, 0.0, 0.0};
 
-    // SOTG::Point2 p2(symbol_map, "p2");
-    // p1["pos"] = {1.0, 0.0, 0.0};
-    // p1["rot"] = {0.0, 0.0, 0.0};
+    SOTG::Point2 p2(symbol_map, "p2");
+    p2["pos"] = {1.0, 0.0, 0.0};
+    p2["rot"] = {0.0, 0.0, 0.0};
 
-    // std::cout << p1 << std::endl;
+    std::cout << p1 << std::endl;
 
     // SOTG::SymbolGroupMap symb_map2;
     // symb_map2["A1"] = {"a"};
@@ -33,5 +32,11 @@ int main()
 
     // std::cout << p2 << std::endl;
 
-    // TrajectoryGenerator tg(symbol_map);
+    SOTG::Path2 my_path;
+    my_path.addPoint(p1);
+    my_path.addPoint(p2);
+
+    SOTG::TrajectoryGenerator2 tg(symbol_map);
+
+    tg.resetPath(my_path);
 }

@@ -24,23 +24,30 @@ include_directories(
 
 add_library(${PROJECT_NAME} SHARED
   src/trajectory_generator.cpp
+  src/trajectory_generator2.cpp
   src/constant_acceleration_solver.cpp
+  src/constant_acceleration_solver2.cpp
   src/path_manager.cpp
+  src/path_manager2.cpp
   src/point.cpp
+  src/point2.cpp
   src/path.cpp
+  src/path2.cpp
   src/section_constraint.cpp
   src/section.cpp
+  src/section2.cpp
   src/linear_segment.cpp
   src/blend_segment.cpp
   src/segment_constraint.cpp
   src/utility_functions.cpp
   src/value_group.cpp
   src/symbol_group.cpp
-  src/point2.cpp
-  src/path2.cpp
 )
 
 target_link_libraries (${PROJECT_NAME} Eigen3::Eigen)
+
+add_executable(test tests/test.cpp)
+target_link_libraries (test ${PROJECT_NAME})
 
 install(TARGETS sotg DESTINATION lib)
 
@@ -54,5 +61,3 @@ install(TARGETS sotg DESTINATION lib)
   #############
   ## Testing ##
   #############
-
-  add_executable(test test/test.cpp)

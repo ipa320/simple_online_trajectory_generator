@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 #include <vector>
 
@@ -18,6 +20,7 @@ public:
 
     size_t getNumWaypoints() { return waypoints_.size(); };
     Point2& getPoint(std::string name);
+    Point2& getPoint(size_t index) { return waypoints_[index]; }
 
     std::vector<Point2>::iterator begin() { return waypoints_.begin(); }
     std::vector<Point2>::iterator end() { return waypoints_.end(); }
