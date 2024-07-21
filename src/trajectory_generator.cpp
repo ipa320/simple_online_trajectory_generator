@@ -43,8 +43,6 @@ int SOTG::TrajectoryGenerator::getNumPassedWaypoints(double tick)
     const Section& section = path_manager_->getSectionAtTime(tick);
     const Point& section_start_point = section.getStartPoint();
 
-    int num_points_passed = section_start_point.getID();
-
     return section_start_point.getID();
 
 }

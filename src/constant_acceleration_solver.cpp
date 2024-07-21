@@ -426,7 +426,7 @@ bool ConstantAccelerationSolver::isBlendAccelerationTooHigh(const std::vector<do
                                                             const double& vel_pre_blend_magnitude,
                                                             const double& vel_post_blend_magnitude,
                                                             const Section& pre_section,
-                                                            const Section& post_section, size_t segment_id)
+                                                            const Section& post_section,[[maybe_unused]] size_t segment_id)
 {
     const Point& dir_AB = pre_section.getDirection();
     const Point& dir_BC = post_section.getDirection();
