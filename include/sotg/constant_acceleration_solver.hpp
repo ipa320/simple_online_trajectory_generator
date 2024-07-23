@@ -67,6 +67,11 @@ namespace detail {
                                  double& vel_pre_blend_magnitude, double& vel_post_blend_magnitude);
 
     public:
+        ConstantAccelerationSolver(const Logger& logger)
+            : KinematicSolver(logger)
+        {
+        }
+
         Section calcSection(Point& p_start_ref, Point& p_end_ref, SectionConstraint constraint_copy,
                             size_t section_id) override;
         std::shared_ptr<BlendSegment> calcBlendSegment(Section& pre_section, Section& post_section,

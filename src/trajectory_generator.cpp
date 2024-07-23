@@ -7,7 +7,16 @@ using namespace SOTG;
 using namespace detail;
 
 TrajectoryGenerator::TrajectoryGenerator()
-    : kinematic_solver_(new detail::ConstantAccelerationSolver)
+    : logger_(*std::unique_ptr<Logger>(new Logger))
+    , kinematic_solver_(new detail::ConstantAccelerationSolver(logger_))
+{
+    path_manager_
+        = std::unique_ptr<detail::PathManager>(new detail::PathManager(kinematic_solver_, debug_info_vec_));
+}
+
+TrajectoryGenerator::TrajectoryGenerator(const Logger& logger)
+    : logger_(logger)
+    , kinematic_solver_(new detail::ConstantAccelerationSolver(logger_))
 {
     path_manager_
         = std::unique_ptr<detail::PathManager>(new detail::PathManager(kinematic_solver_, debug_info_vec_));

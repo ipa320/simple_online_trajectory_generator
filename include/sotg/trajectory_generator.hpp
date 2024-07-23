@@ -5,6 +5,7 @@
 
 #include "sotg/constant_acceleration_solver.hpp"
 #include "sotg/kinematic_solver.hpp"
+#include "sotg/logger.hpp"
 #include "sotg/path.hpp"
 #include "sotg/path_manager.hpp"
 #include "sotg/point.hpp"
@@ -22,9 +23,11 @@ private:
     std::shared_ptr<detail::KinematicSolver> kinematic_solver_;
 
     std::vector<std::map<std::string, double>> debug_info_vec_;
+    const Logger& logger_;
 
 public:
     TrajectoryGenerator();
+    TrajectoryGenerator(const Logger& logger);
 
     double getDuration();
     void calcPositionAndVelocity(double time, Point& pos, Point& vel, int& id, bool disable_blending = false);
