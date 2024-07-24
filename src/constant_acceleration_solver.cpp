@@ -121,12 +121,6 @@ void ConstantAccelerationSolver::calcPhaseTimeAndDistance(double& a_max, double&
     coast_phase_single_dof.distance_p_start = L_acc;
 
     dec_phase_single_dof.distance_p_start = L_acc + L_coast;
-
-    if (L_coast < 0.0 && !(std::abs(L_coast) < 1e-4)) {
-#ifdef DEBUG
-        std::cout << "Warning::KinematicSolver: velocity should not be decreased in this step!" << std::endl;
-#endif
-    }
 }
 
 int findIndexOfMax(const std::vector<double>& values)
@@ -180,9 +174,9 @@ void ConstantAccelerationSolver::calcTotalTimeAndDistanceSingleDoF(double& a_max
 
     if (L_coast < 0.0 && !(std::abs(L_coast) < 1e-6)) {
         double v_max_reduced = std::sqrt(total_length * a_max);
-#ifdef DEBUG
-        std::cout << "Info::KinematicSolver: Decreasing maximum velocity" << std::endl;
-#endif
+
+        logger_.log("KinematicSolver: Decreasing maximum velocity from " + std::to_string(v_max) + " to " + std::to_string(v_max_reduced), Logger::INFO);
+
         calcTotalTimeAndDistanceSingleDoF(a_max, v_max_reduced, total_length, total_time);
         v_max = v_max_reduced;
     }
@@ -386,17 +380,15 @@ void ConstantAccelerationSolver::calcSecondBlendingDist(double T_blend, double T
 
     // If "second" values are post values, the "first" values will be pre values. And vice versa
     if (T_blend < T_acc_second) {
-#ifdef DEBUG
-        std::cout << "[" << segment_id << "]"
-                  << " Info: Blending into acceleration phase" << std::endl;
-#endif
+        logger_.log("[Segment Nr." + std::to_string(segment_id) + "] Blending into acceleration phase",
+                    Logger::DEBUG);
+
         blending_dist_second = 2 * std::pow(blending_dist_first, 2) * a_max_magnitude_second
                                / std::pow(vel_first_blend_magnitude, 2);
     } else {
-#ifdef DEBUG
-        std::cout << "[" << segment_id << "]"
-                  << " Info: Blending into constant velocity phase" << std::endl;
-#endif
+        logger_.log("[Segment Nr." + std::to_string(segment_id) + "] Blending into constant velocity phase",
+                    Logger::DEBUG);
+
         blending_dist_second
             = blending_dist_first * a_max_magnitude_second * T_acc_second / vel_first_blend_magnitude;
     }
@@ -465,26 +457,25 @@ bool ConstantAccelerationSolver::isBlendAccelerationTooHigh(const std::vector<do
     }
 
     if (blend_acc_linear_mag > a_max_linear_mag && !utility::nearlyZero(blend_acc_linear_mag)) {
-#ifdef DEBUG
-        std::cout << "[" << segment_id << "]"
-                  << " Warning: Eceeding maximum linear acceleration!" << std::endl;
-        std::cout << "[" << segment_id << "]"
-                  << " Linear Acceleration magnitude would be " << blend_acc_linear_mag << " m/s^2, but only "
-                  << a_max_linear_mag << " m/s^2 is allowed" << std::endl;
-        std::cout << "[" << segment_id << "]"
-                  << " Deactivating blending in this segment" << std::endl;
-#endif
+        logger_.log("[Segment Nr." + std::to_string(segment_id) + "] Eceeding maximum linear acceleration!",
+                    Logger::WARNING);
+        logger_.log("[Segment Nr." + std::to_string(segment_id) + "] Linear Acceleration magnitude would be "
+                        + std::to_string(blend_acc_linear_mag) + " m/s^2, but only "
+                        + std::to_string(a_max_linear_mag) + " m/s^2 is allowed",
+                    Logger::WARNING);
+        logger_.log("[Segment Nr." + std::to_string(segment_id) + "] Deactivating blending in this segment",
+                    Logger::WARNING);
+
         return true;
     } else if (blend_acc_angular_mag > a_max_angular_mag && !utility::nearlyZero(blend_acc_angular_mag)) {
-#ifdef DEBUG
-        std::cout << "[" << segment_id << "]"
-                  << " Warning: Eceeding maximum angular acceleration!" << std::endl;
-        std::cout << "[" << segment_id << "]"
-                  << " Angular acceleration magnitude would be " << blend_acc_angular_mag << " 1/s^2, but only "
-                  << a_max_angular_mag << " 1/s^2 is allowed" << std::endl;
-        std::cout << "[" << segment_id << "]"
-                  << " Deactivating blending in this segment" << std::endl;
-#endif
+        logger_.log("[Segment Nr." + std::to_string(segment_id) + "] Eceeding maximum angular acceleration!",
+                    Logger::WARNING);
+        logger_.log("[Segment Nr." + std::to_string(segment_id) + "] Angular Acceleration magnitude would be "
+                        + std::to_string(blend_acc_angular_mag) + " 1/s^2, but only "
+                        + std::to_string(a_max_angular_mag) + " 1/s^2 is allowed",
+                    Logger::WARNING);
+        logger_.log("[Segment Nr." + std::to_string(segment_id) + "] Deactivating blending in this segment",
+                    Logger::WARNING);
 
         return true;
     } else
@@ -511,9 +502,6 @@ ConstantAccelerationSolver::calcBlendSegment(Section& pre_section, Section& post
                                              const SegmentConstraint& constraint, size_t segment_id,
                                              std::map<std::string, double>& debug_output)
 {
-#ifdef DEBUG
-    std::cout << "\n-- Segment " << segment_id << " --\n" << std::endl;
-#endif
     /* Blending from A' to C' across B with constant acceleration
        https://www.diag.uniroma1.it/~deluca/rob1_en/14_TrajectoryPlanningCartesian.pdf
 
@@ -546,10 +534,9 @@ ConstantAccelerationSolver::calcBlendSegment(Section& pre_section, Section& post
     double blending_dist_pre = constraint.getBlendDistance();
 
     if (blending_dist_pre > length_AB / 2) {
-#ifdef DEBUG
-        std::cout << "[" << segment_id << "]"
-                  << " Warning: Pre blending distance is croped" << std::endl;
-#endif
+        logger_.log("[Segment Nr." + std::to_string(segment_id) + "] Pre blending distance is croped",
+                    Logger::INFO);
+
         blending_dist_pre = length_AB / 2;
     }
 

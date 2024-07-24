@@ -24,6 +24,7 @@ include_directories(
 
 add_library(${PROJECT_NAME} SHARED
   src/trajectory_generator.cpp
+  src/logger.cpp
   src/constant_acceleration_solver.cpp
   src/path_manager.cpp
   src/point.cpp
@@ -39,6 +40,9 @@ add_library(${PROJECT_NAME} SHARED
 target_link_libraries (${PROJECT_NAME} Eigen3::Eigen)
 
 install(TARGETS sotg DESTINATION lib)
+
+
+#add_definitions(-DVERBOSE) # Enable printing info and warn messages to cout using default logger
 
   ###########
   ## Debug ##

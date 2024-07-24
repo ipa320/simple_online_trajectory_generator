@@ -2,9 +2,11 @@
 
 #include <map>
 #include <memory>
+#include <string>
 
 #include "sotg/blend_segment.hpp"
 #include "sotg/linear_segment.hpp"
+#include "sotg/logger.hpp"
 #include "sotg/section.hpp"
 #include "sotg/segment.hpp"
 
@@ -14,7 +16,15 @@ namespace detail {
     // segment generation aswell as the calculation of position and velocity for a
     // specific point in time
     class KinematicSolver {
+    protected:
+        const Logger& logger_;
+
     public:
+        KinematicSolver(const Logger& logger)
+            : logger_(logger)
+        {
+        }
+
         virtual Section calcSection(Point& p_start_ref, Point& p_end_ref, SectionConstraint constraint_copy,
                                     size_t section_id)
             = 0;
