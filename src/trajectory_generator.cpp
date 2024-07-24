@@ -7,7 +7,8 @@ using namespace SOTG;
 using namespace detail;
 
 TrajectoryGenerator::TrajectoryGenerator()
-    : logger_(*std::unique_ptr<Logger>(new Logger))
+    : default_logger_(new Logger())
+    , logger_(*default_logger_)
     , kinematic_solver_(new detail::ConstantAccelerationSolver(logger_))
 {
     path_manager_

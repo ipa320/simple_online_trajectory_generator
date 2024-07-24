@@ -19,11 +19,13 @@ namespace SOTG {
 // specifc point in time
 class TrajectoryGenerator {
 private:
+    std::shared_ptr<Logger> default_logger_;
+    const Logger& logger_;
+
     std::unique_ptr<detail::PathManager> path_manager_;
     std::shared_ptr<detail::KinematicSolver> kinematic_solver_;
 
     std::vector<std::map<std::string, double>> debug_info_vec_;
-    const Logger& logger_;
 
 public:
     TrajectoryGenerator();

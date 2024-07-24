@@ -175,7 +175,7 @@ void ConstantAccelerationSolver::calcTotalTimeAndDistanceSingleDoF(double& a_max
     if (L_coast < 0.0 && !(std::abs(L_coast) < 1e-6)) {
         double v_max_reduced = std::sqrt(total_length * a_max);
 
-        logger_.log("KinematicSolver: Decreasing maximum velocity", Logger::INFO);
+        logger_.log("KinematicSolver: Decreasing maximum velocity from " + std::to_string(v_max) + " to " + std::to_string(v_max_reduced), Logger::INFO);
 
         calcTotalTimeAndDistanceSingleDoF(a_max, v_max_reduced, total_length, total_time);
         v_max = v_max_reduced;
@@ -380,13 +380,13 @@ void ConstantAccelerationSolver::calcSecondBlendingDist(double T_blend, double T
 
     // If "second" values are post values, the "first" values will be pre values. And vice versa
     if (T_blend < T_acc_second) {
-        logger_.log("[ Segment Nr." + std::to_string(segment_id) + "] Blending into acceleration phase",
+        logger_.log("[Segment Nr." + std::to_string(segment_id) + "] Blending into acceleration phase",
                     Logger::DEBUG);
 
         blending_dist_second = 2 * std::pow(blending_dist_first, 2) * a_max_magnitude_second
                                / std::pow(vel_first_blend_magnitude, 2);
     } else {
-        logger_.log("[ Segment Nr." + std::to_string(segment_id) + "] Blending into constant velocity phase",
+        logger_.log("[Segment Nr." + std::to_string(segment_id) + "] Blending into constant velocity phase",
                     Logger::DEBUG);
 
         blending_dist_second
@@ -457,24 +457,24 @@ bool ConstantAccelerationSolver::isBlendAccelerationTooHigh(const std::vector<do
     }
 
     if (blend_acc_linear_mag > a_max_linear_mag && !utility::nearlyZero(blend_acc_linear_mag)) {
-        logger_.log("[ Segment Nr." + std::to_string(segment_id) + "] Eceeding maximum linear acceleration!",
+        logger_.log("[Segment Nr." + std::to_string(segment_id) + "] Eceeding maximum linear acceleration!",
                     Logger::WARNING);
-        logger_.log("[ Segment Nr." + std::to_string(segment_id) + "] Linear Acceleration magnitude would be "
+        logger_.log("[Segment Nr." + std::to_string(segment_id) + "] Linear Acceleration magnitude would be "
                         + std::to_string(blend_acc_linear_mag) + " m/s^2, but only "
                         + std::to_string(a_max_linear_mag) + " m/s^2 is allowed",
                     Logger::WARNING);
-        logger_.log("[ Segment Nr." + std::to_string(segment_id) + "] Deactivating blending in this segment",
+        logger_.log("[Segment Nr." + std::to_string(segment_id) + "] Deactivating blending in this segment",
                     Logger::WARNING);
 
         return true;
     } else if (blend_acc_angular_mag > a_max_angular_mag && !utility::nearlyZero(blend_acc_angular_mag)) {
-        logger_.log("[ Segment Nr." + std::to_string(segment_id) + "] Eceeding maximum angular acceleration!",
+        logger_.log("[Segment Nr." + std::to_string(segment_id) + "] Eceeding maximum angular acceleration!",
                     Logger::WARNING);
-        logger_.log("[ Segment Nr." + std::to_string(segment_id) + "] Angular Acceleration magnitude would be "
+        logger_.log("[Segment Nr." + std::to_string(segment_id) + "] Angular Acceleration magnitude would be "
                         + std::to_string(blend_acc_angular_mag) + " 1/s^2, but only "
                         + std::to_string(a_max_angular_mag) + " 1/s^2 is allowed",
                     Logger::WARNING);
-        logger_.log("[ Segment Nr." + std::to_string(segment_id) + "] Deactivating blending in this segment",
+        logger_.log("[Segment Nr." + std::to_string(segment_id) + "] Deactivating blending in this segment",
                     Logger::WARNING);
 
         return true;
@@ -534,7 +534,7 @@ ConstantAccelerationSolver::calcBlendSegment(Section& pre_section, Section& post
     double blending_dist_pre = constraint.getBlendDistance();
 
     if (blending_dist_pre > length_AB / 2) {
-        logger_.log("[ Segment Nr." + std::to_string(segment_id) + "] Pre blending distance is croped",
+        logger_.log("[Segment Nr." + std::to_string(segment_id) + "] Pre blending distance is croped",
                     Logger::INFO);
 
         blending_dist_pre = length_AB / 2;

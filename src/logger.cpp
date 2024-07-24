@@ -2,17 +2,23 @@
 
 using namespace SOTG;
 
-void Logger::log(const std::string& message, MsgType type = INFO) const
+void Logger::log( [[maybe_unused]] const std::string& message, [[maybe_unused]] MsgType type) const
 {
+#ifdef VERBOSE
     switch (type) {
-    INFO:
-        std::cout << "[INFO] " << message << std::endl;
+    case INFO:
+        std::cout << "[ INFO] " << message << std::endl;
         break;
-    WARNING:
-        std::cout << "[WARNING] " << message << std::endl;
+    case WARNING:
+        std::cout << "[ WARN] " << message << std::endl;
         break;
-    DEBUG:
+    case DEBUG:
+#ifdef DEBUG
         std::cout << "[DEBUG] " << message << std::endl;
+#endif
         break;
+    default:
+        throw std::runtime_error("SOTG Logger received message with unknown Message Type, Content: " + message);
     }
+#endif
 }

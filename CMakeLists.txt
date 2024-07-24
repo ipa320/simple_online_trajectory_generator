@@ -41,6 +41,9 @@ target_link_libraries (${PROJECT_NAME} Eigen3::Eigen)
 
 install(TARGETS sotg DESTINATION lib)
 
+
+#add_definitions(-DVERBOSE) # Enable printing info and warn messages to cout using default logger
+
   ###########
   ## Debug ##
   ###########
