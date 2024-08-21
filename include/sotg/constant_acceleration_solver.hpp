@@ -35,7 +35,7 @@ namespace detail {
                                       PhaseDoF& coast_phase_single_dof, PhaseDoF& dec_phase_single_dof);
 
         void calcTotalTimeAndDistanceSingleDoF(double& a_max, double& v_max, double total_length,
-                                               double& total_time);
+                                               double& total_time, size_t coordinate_id);
 
         void calcTimesAndLengthsMultiDoF(Phase& acc_phase, Phase& coast_phase, Phase& dec_phase,
                                          std::vector<double>& total_time_per_dof,

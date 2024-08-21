@@ -138,7 +138,8 @@ int findIndexOfMax(const std::vector<double>& values)
 }
 
 void ConstantAccelerationSolver::calcTotalTimeAndDistanceSingleDoF(double& a_max, double& v_max,
-                                                                   double total_length, double& total_time)
+                                                                   double total_length, double& total_time,
+                                                                   size_t coordinate_id)
 {
     double T_acc;
     double T_coast;
@@ -175,12 +176,12 @@ void ConstantAccelerationSolver::calcTotalTimeAndDistanceSingleDoF(double& a_max
     if (L_coast < 0.0 && !(std::abs(L_coast) < 1e-6)) {
         double v_max_reduced = std::sqrt(total_length * a_max);
 
-        logger_.log("[Section Nr." + std::to_string(current_section_id)
-                        + "] KinematicSolver: Decreasing maximum velocity from " + std::to_string(v_max) + " to "
-                        + std::to_string(v_max_reduced),
+        logger_.log("[Section Nr." + std::to_string(current_section_id) + "][Coord. Nr."
+                        + std::to_string(coordinate_id) + "] KinematicSolver: Decreasing maximum velocity from "
+                        + std::to_string(v_max) + " to " + std::to_string(v_max_reduced),
                     Logger::INFO);
 
-        calcTotalTimeAndDistanceSingleDoF(a_max, v_max_reduced, total_length, total_time);
+        calcTotalTimeAndDistanceSingleDoF(a_max, v_max_reduced, total_length, total_time, coordinate_id);
         v_max = v_max_reduced;
     }
 }
@@ -196,7 +197,7 @@ void ConstantAccelerationSolver::calcTimesAndLengthsMultiDoF(Phase& acc_phase, P
         double total_length_dof = std::abs(diff[i]);
         double total_time_dof = 0.0;
 
-        calcTotalTimeAndDistanceSingleDoF(a_max_vec[i], v_max_vec[i], total_length_dof, total_time_dof);
+        calcTotalTimeAndDistanceSingleDoF(a_max_vec[i], v_max_vec[i], total_length_dof, total_time_dof, i);
 
         total_time_per_dof.push_back(total_time_dof);
         total_length_per_dof.push_back(total_length_dof);
