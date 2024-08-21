@@ -21,6 +21,9 @@ namespace detail {
     // bang coast bang profile
     class ConstantAccelerationSolver : public KinematicSolver {
     private:
+        size_t current_section_id{0};
+        size_t current_segment_id{0};
+
         void calcSegmentPreparations(const Section& pre_section, const Section& post_section,
                                      std::vector<double>& a_max_post, std::vector<double>& a_max_pre,
                                      double& L_acc_magnitude_post, double& T_acc_post, double& T_acc_pre);

@@ -175,7 +175,10 @@ void ConstantAccelerationSolver::calcTotalTimeAndDistanceSingleDoF(double& a_max
     if (L_coast < 0.0 && !(std::abs(L_coast) < 1e-6)) {
         double v_max_reduced = std::sqrt(total_length * a_max);
 
-        logger_.log("KinematicSolver: Decreasing maximum velocity from " + std::to_string(v_max) + " to " + std::to_string(v_max_reduced), Logger::INFO);
+        logger_.log("[Section Nr." + std::to_string(current_section_id)
+                        + "] KinematicSolver: Decreasing maximum velocity from " + std::to_string(v_max) + " to "
+                        + std::to_string(v_max_reduced),
+                    Logger::INFO);
 
         calcTotalTimeAndDistanceSingleDoF(a_max, v_max_reduced, total_length, total_time);
         v_max = v_max_reduced;
@@ -257,6 +260,8 @@ void ConstantAccelerationSolver::calcTimesAndLengthsMultiDoF(Phase& acc_phase, P
 Section ConstantAccelerationSolver::calcSection(Point& p_start_ref, Point& p_end_ref,
                                                 SectionConstraint constraint_copy, size_t section_id)
 {
+    current_section_id = section_id;
+
     Section section(p_start_ref, p_end_ref, constraint_copy, section_id);
 
     std::vector<double> reduced_acceleration_per_dof;
@@ -513,6 +518,8 @@ ConstantAccelerationSolver::calcBlendSegment(Section& pre_section, Section& post
 
     */
 
+    current_segment_id = segment_id;
+
     double length_AB = pre_section.getLength();
     double length_BC = post_section.getLength();
     double a_max_magnitude_post, a_max_magnitude_pre, L_acc_magnitude_post, T_acc_post, T_acc_pre;
@@ -534,7 +541,7 @@ ConstantAccelerationSolver::calcBlendSegment(Section& pre_section, Section& post
     double blending_dist_pre = constraint.getBlendDistance();
 
     if (blending_dist_pre > length_AB / 2) {
-        logger_.log("[Segment Nr." + std::to_string(segment_id) + "] Pre blending distance is croped",
+        logger_.log("[Segment Nr." + std::to_string(segment_id) + "] Pre blending distance is cropped",
                     Logger::INFO);
 
         blending_dist_pre = length_AB / 2;
