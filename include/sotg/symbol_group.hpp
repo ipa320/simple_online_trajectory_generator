@@ -19,6 +19,7 @@ namespace SOTG {
 class SymbolGroup {
 private:
     std::vector<std::string> symbols_;
+    bool is_quaternion_ {false};
 
 public:
     SymbolGroup(std::initializer_list<std::string> list)
@@ -41,7 +42,7 @@ public:
     bool operator==(const SymbolGroup& symbol_group) const;
     bool operator!=(const SymbolGroup& symbol_group) const;
 
-    bool is_quaternion = false;
+    bool isQuaternion() const { return is_quaternion_; }
 
     friend std::ostream& operator<<(std::ostream& out, const SymbolGroup& sg)
     {

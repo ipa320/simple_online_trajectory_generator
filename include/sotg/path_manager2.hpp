@@ -35,7 +35,7 @@ namespace detail {
 
         const std::list<Section2>& getSections() const { return sections_; }
 
-        const Section2& getSectionAtTime(double time);
+        Section2& getSectionAtTime(double time);
 
         std::ostream& operator<<(std::ostream& out);
     };

@@ -5,19 +5,21 @@ using namespace detail;
 
 int findIndexOfMax(const std::vector<double>& values);
 double calcVecNorm(const std::vector<double>& vec);
-double calcPhaseLength(const Phase& phase);
+double calcPhaseLength(const Phase2& phase);
 
-void ConstantAccelerationSolver2::calcAccAndVelPerDoF(const Section2& section, std::vector<double>& a_max_vec,
-                                                      std::vector<double>& v_max_vec)
+double calcPhaseLength(const Phase2& phase)
 {
-    Point2 p_start = section.getStartPoint();
-    Point2 p_end = section.getEndPoint();
+    double sum = 0.0;
+    for (auto& component : phase.components) {
+        sum += std::pow(component.second.length, 2);
+    }
+    return std::sqrt(sum);
 }
 
-void ConstantAccelerationSolver2::calcPhaseTimeAndDistance(double& a_max, double& v_max, double L_total,
-                                                           PhaseDoF& acc_phase_single_dof,
-                                                           PhaseDoF& coast_phase_single_dof,
-                                                           PhaseDoF& dec_phase_single_dof)
+void ConstantAccelerationSolver2::calcPhaseDurationAndDistance(double a_max, double v_max, double L_total,
+                                                           Phase2Component& acc_phase_single_dof,
+                                                           Phase2Component& coast_phase_single_dof,
+                                                           Phase2Component& dec_phase_single_dof)
 {
     double T_acc;
     double T_coast;
@@ -58,14 +60,10 @@ void ConstantAccelerationSolver2::calcPhaseTimeAndDistance(double& a_max, double
     coast_phase_single_dof.distance_p_start = L_acc;
 
     dec_phase_single_dof.distance_p_start = L_acc + L_coast;
-
-    if (L_coast < 0.0 && !(std::abs(L_coast) < 1e-4)) {
-        std::cout << "Warning::KinematicSolver: velocity should not be decreased in this step!" << std::endl;
-    }
 }
 
-void ConstantAccelerationSolver2::calcTotalTimeAndDistanceSingleDoF(double& a_max, double& v_max,
-                                                                    double total_length, double& total_time)
+void ConstantAccelerationSolver2::calcDurationAndDistancePerGroup(double& a_max, double& v_max, double distance,
+                                               double& duration)
 {
     double T_acc;
     double T_coast;
@@ -90,67 +88,102 @@ void ConstantAccelerationSolver2::calcTotalTimeAndDistanceSingleDoF(double& a_ma
 
     L_dec = -0.5 * a_max * std::pow(T_dec, 2) + v_max * T_dec;
 
-    L_coast = total_length - L_acc - L_dec;
+    L_coast = distance - L_acc - L_dec;
     if (utility::nearlyZero(v_max)) {
         T_coast = 0.0;
     } else {
         T_coast = L_coast / v_max;
     }
 
-    total_time = T_acc + T_coast + T_dec;
+    duration = T_acc + T_coast + T_dec;
 
     if (L_coast < 0.0 && !(std::abs(L_coast) < 1e-6)) {
-        double v_max_reduced = std::sqrt(total_length * a_max);
+        double v_max_reduced = std::sqrt(distance * a_max);
 #ifdef DEBUG
         std::cout << "Info::KinematicSolver: Decreasing maximum velocity" << std::endl;
 #endif
-        calcTotalTimeAndDistanceSingleDoF(a_max, v_max_reduced, total_length, total_time);
+        calcDurationAndDistancePerGroup(a_max, v_max_reduced, distance, duration);
         v_max = v_max_reduced;
     }
 }
 
-void ConstantAccelerationSolver2::calcTimesAndLengthsMultiDoF(Phase& acc_phase, Phase& coast_phase,
-                                                              Phase& dec_phase,
-                                                              std::vector<double>& total_time_per_dof,
-                                                              std::vector<double>& total_length_per_dof,
-                                                              Point2 diff, std::vector<double>& a_max_vec,
-                                                              std::vector<double>& v_max_vec)
+void ConstantAccelerationSolver2::calcDurationAndDistance(Phase2& acc_phase, Phase2& coast_phase,
+                                                              Phase2& dec_phase, Point2& start_point, Point2& end_point,
+                                                              std::vector<double>& duration_per_group,
+                                                              std::vector<double>& distance_per_group, std::map<std::string, double>& group_acc, std::map<std::string, double>& group_vel)
 {
-    // for (size_t i = 0; i < diff.size(); i++) {
-    //     double total_length_dof = std::abs(diff[i]);
-    //     double total_time_dof = 0.0;
+    std::vector<std::string> group_names;
+    for (const auto [group_name, symbols] : symbol_map_)
+    {
+        double duration;
 
-    //     calcTotalTimeAndDistanceSingleDoF(a_max_vec[i], v_max_vec[i], total_length_dof, total_time_dof);
+        if(symbols.isQuaternion()) {
+            //handle that
+        } else {
+            double distance = (end_point[group_name].getCartesianValues() - start_point[group_name].getCartesianValues()).norm();
+            distance_per_group.push_back(distance);
 
-    //     total_time_per_dof.push_back(total_time_dof);
-    //     total_length_per_dof.push_back(total_length_dof);
-    // }
+            double a_max = end_point[group_name].getMaxAcc();
+            double v_max = end_point[group_name].getMaxVel();
 
-    int index_slowest_dof = findIndexOfMax(total_time_per_dof);
+            calcDurationAndDistancePerGroup(a_max,v_max, distance, duration);
 
-    // phase sync
-    // https://theses.hal.science/tel-01285383/document p.62 ff.
+            group_vel[group_name] = v_max;
+            group_acc[group_name] = a_max;
+            duration_per_group.push_back(duration);
+            group_names.push_back(group_name);
+        }
+    }
+
+    int index_slowest_group = findIndexOfMax(duration_per_group);
+
+    for (size_t i = 0; i < distance_per_group.size(); ++i)
+    {
+        double lambda = 0.0;  // lambda is defined in theses
+        if (!utility::nearlyZero(distance_per_group[index_slowest_group])) {
+            lambda = distance_per_group[i] / distance_per_group[index_slowest_group];
+        }
+
+        std::string current_group = group_names[i];
+        double a_max = group_acc[current_group];
+        double v_max = group_vel[current_group];
+
+        double reduced_a_max = lambda * a_max;
+        double reduced_v_max = lambda * v_max;
+
+        group_acc[current_group] = reduced_a_max;
+        group_vel[current_group] = reduced_v_max;
+
+        double section_length = distance_per_group[i];
+        Phase2Component acc_phase_per_group, coast_phase_per_group, dec_phase_per_group;
+        calcPhaseDurationAndDistance(reduced_a_max, reduced_v_max, section_length, acc_phase_per_group,
+                                 coast_phase_per_group, dec_phase_per_group);
+
+        acc_phase.components[current_group] = acc_phase_per_group;
+        coast_phase.components[current_group] = coast_phase_per_group;
+        dec_phase.components[current_group] = dec_phase_per_group;
+    }
 
     // Find the first component duration that is not 0.0 because all of them have the same value or 0.0
     auto it_acc
         = std::find_if(acc_phase.components.begin(), acc_phase.components.end(),
-                       [](const PhaseDoF& phase_dof) { return !(utility::nearlyZero(phase_dof.duration)); });
+                       [](const auto &it) { return !(utility::nearlyZero(it.second.duration)); });
     if (it_acc != acc_phase.components.end()) {
-        acc_phase.duration = it_acc->duration;
+        acc_phase.duration = it_acc->second.duration;
     }
 
     auto it_coast
         = std::find_if(coast_phase.components.begin(), coast_phase.components.end(),
-                       [](const PhaseDoF& phase_dof) { return !(utility::nearlyZero(phase_dof.duration)); });
+                       [](const auto &it) { return !(utility::nearlyZero(it.second.duration)); });
     if (it_coast != coast_phase.components.end()) {
-        coast_phase.duration = it_coast->duration;
+        coast_phase.duration = it_coast->second.duration;
     }
 
     auto it_dec
         = std::find_if(dec_phase.components.begin(), dec_phase.components.end(),
-                       [](const PhaseDoF& phase_dof) { return !(utility::nearlyZero(phase_dof.duration)); });
+                       [](const auto &it) { return !(utility::nearlyZero(it.second.duration)); });
     if (it_dec != dec_phase.components.end()) {
-        dec_phase.duration = it_dec->duration;
+        dec_phase.duration = it_dec->second.duration;
     }
 }
 
@@ -158,40 +191,33 @@ Section2 ConstantAccelerationSolver2::calcSection(Point2& p_start_ref, Point2& p
 {
     Section2 section(p_start_ref, p_end_ref, section_id);
 
-    for (auto& group : section.getValueGroups()) { }
+    std::vector<double> duration_per_group;
+    std::vector<double> distance_per_group;
+    std::vector<Phase2> phases;
+    Phase2 acc_phase, coast_phase, dec_phase;
 
-    std::vector<double> reduced_acceleration_per_dof;
-    std::vector<double> reduced_velocity_per_dof;
+    std::map<std::string, double>& v_max = section.getVelocities();
+    std::map<std::string, double>& a_max = section.getAccelerations();
 
-    calcAccAndVelPerDoF(section, reduced_acceleration_per_dof, reduced_velocity_per_dof);
 
-    Point2 p_start = section.getStartPoint();
-    Point2 p_end = section.getEndPoint();
+    calcDurationAndDistance(acc_phase, coast_phase, dec_phase, p_start_ref, p_end_ref, duration_per_group, distance_per_group, a_max, v_max);
 
-    std::vector<double> total_time_per_dof;
-    std::vector<double> total_length_per_dof;
-    std::vector<Phase> phases;
-    Phase acc_phase, coast_phase, dec_phase;
-
-    calcTimesAndLengthsMultiDoF(acc_phase, coast_phase, dec_phase, total_time_per_dof, total_length_per_dof, diff,
-                                reduced_acceleration_per_dof, reduced_velocity_per_dof);
-
-    int index_slowest_dof = findIndexOfMax(total_time_per_dof);
-    double T_total = total_time_per_dof[index_slowest_dof];
+    int index_slowest_dof = findIndexOfMax(duration_per_group);
+    double T_total = duration_per_group[index_slowest_dof];
     section.setIndexSlowestDoF(index_slowest_dof);
     section.setDuration(T_total);
 
-    acc_phase.type = PhaseType::ConstantAcceleration;
+    acc_phase.type = PhaseType2::ConstantAcceleration2;
     acc_phase.length = calcPhaseLength(acc_phase);
     phases.push_back(acc_phase);
 
-    coast_phase.type = PhaseType::ConstantVelocity;
+    coast_phase.type = PhaseType2::ConstantVelocity2;
     coast_phase.t_start = acc_phase.duration;
     coast_phase.length = calcPhaseLength(coast_phase);
     coast_phase.distance_p_start = acc_phase.length;
     phases.push_back(coast_phase);
 
-    dec_phase.type = PhaseType::ConstantDeacceleration;
+    dec_phase.type = PhaseType2::ConstantDeacceleration2;
     dec_phase.t_start = coast_phase.duration + coast_phase.t_start;
     dec_phase.length = calcPhaseLength(dec_phase);
     dec_phase.distance_p_start = coast_phase.distance_p_start + coast_phase.length;
@@ -199,25 +225,22 @@ Section2 ConstantAccelerationSolver2::calcSection(Point2& p_start_ref, Point2& p
 
     section.setPhases(phases);
 
-    section.setAdaptedAcceleration(reduced_acceleration_per_dof);
-    section.setAdaptedVelocity(reduced_velocity_per_dof);
-
     return section;
 }
 
-void ConstantAccelerationSolver2::calcPosAndVelSingleDoFLinear(double section_dof_length, const Phase& phase,
+void ConstantAccelerationSolver2::calcPosAndVelSingleDoFLinear(double section_dof_length, const Phase2& phase,
                                                                double phase_distance_to_p_start, double t_phase,
                                                                double a_max_reduced, double v_max_reduced,
                                                                double& pos, double& vel) const
 {
     double p_i{0}, v_i{0};
-    if (phase.type == PhaseType::ConstantAcceleration) {
+    if (phase.type == PhaseType2::ConstantAcceleration2) {
         p_i = 0.5 * a_max_reduced * std::pow(t_phase, 2);
         v_i = a_max_reduced * t_phase;
-    } else if (phase.type == PhaseType::ConstantVelocity) {
+    } else if (phase.type == PhaseType2::ConstantVelocity2) {
         p_i = v_max_reduced * t_phase + phase_distance_to_p_start;
         v_i = v_max_reduced;
-    } else if (phase.type == PhaseType::ConstantDeacceleration) {
+    } else if (phase.type == PhaseType2::ConstantDeacceleration2) {
         p_i = -0.5 * a_max_reduced * std::pow(t_phase, 2) + v_max_reduced * t_phase + phase_distance_to_p_start;
         v_i = -a_max_reduced * t_phase + v_max_reduced;
     }
@@ -229,29 +252,38 @@ void ConstantAccelerationSolver2::calcPosAndVelSingleDoFLinear(double section_do
     vel = v_i;
 }
 
-void ConstantAccelerationSolver2::calcPosAndVelSection(double t_section, const Section2& section, Point2& pos,
-                                                       Point2& vel) const
+void ConstantAccelerationSolver2::calcPosAndVelSection(double t_section, Section2& section, Result& result) const
 {
-    // Point2 p_start = section.getStartPoint();
-    // Point2 p_end = section.getEndPoint();
-    // Point2 diff = p_end - p_start;
+    Point2 p_start = section.getStartPoint();
+    Point2 p_end = section.getEndPoint();
 
-    // const std::vector<double>& a_max_vec = section.getAdaptedAcceleration();
-    // const std::vector<double>& v_max_vec = section.getAdaptedVelocity();
+    Point2 diff = p_end - p_start;
 
-    // const Phase& phase = section.getPhaseByTime(t_section);
-    // double t_phase = t_section - phase.t_start;
-    // for (size_t i = 0; i < p_start.size(); i++) {
-    //     double pos_relative_magnitude, vel_magnitude;
-    //     calcPosAndVelSingleDoFLinear(std::abs(diff[i]), phase, phase.components[i].distance_p_start, t_phase,
-    //                                  a_max_vec[i], v_max_vec[i], pos_relative_magnitude, vel_magnitude);
+    Phase2& phase = section.getPhaseByTime(t_section);
+    double t_phase = t_section - phase.t_start;
 
-    //     double pos_component = p_start[i] + pos_relative_magnitude * diff[i];
-    //     double vel_component = vel_magnitude * utility::sign(diff[i]);
+    for (const auto [group_name, symbols] : symbol_map_)
+    {
+        double a_max = section.getAccelerations()[group_name];
+        double v_max = section.getVelocities()[group_name];
 
-    //     pos.addValue(pos_component);
-    //     vel.addValue(vel_component);
-    // }
-    // pos.setOrientationIndex(p_start.getOrientationIndex());
-    // vel.setOrientationIndex(p_start.getOrientationIndex());
+        if (symbols.isQuaternion()) {
+            // handle that
+        } else {
+            ValueGroup diff_group = diff[group_name];
+            double diff_magnitude = diff_group.getCartesianValues().norm();
+            ValueGroup dir_group = diff_group * (1.0 / diff_magnitude);
+
+            double pos_magnitude, vel_magnitude;
+            calcPosAndVelSingleDoFLinear(diff_magnitude, phase, phase.components[group_name].distance_p_start, t_phase,
+                                     a_max, v_max, pos_magnitude, vel_magnitude);
+
+            ValueGroup& loc = result.getLocation()[group_name];
+            ValueGroup& vel = result.getVelocity()[group_name];
+            ValueGroup test = diff_group * pos_magnitude;
+            loc = p_start[group_name] + test;
+            vel = dir_group * vel_magnitude;
+        }
+
+    }
 }

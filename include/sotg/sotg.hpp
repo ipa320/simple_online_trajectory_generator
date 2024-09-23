@@ -8,3 +8,4 @@
 #include "sotg/symbol_group.hpp"
 #include "sotg/trajectory_generator.hpp"
 #include "sotg/trajectory_generator2.hpp"
+#include "sotg/result.hpp"

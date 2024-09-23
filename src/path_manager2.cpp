@@ -23,11 +23,11 @@ void PathManager2::resetSections()
         sections_.push_back(section);
     }
 
-    double current_time = 0.0;
+    double section_time_offset = 0.0;
     for (Section2& section : sections_) {
         double duration = section.getDuration();
-        section.setStartTime(current_time);
-        current_time += duration;
+        section.setStartTime(section_time_offset);
+        section_time_offset += duration;
 
 #ifdef DEBUG
         std::cout << "Section2 start time: " << section.getStartTime() << ", duration: " << section.getDuration()
@@ -60,10 +60,10 @@ std::ostream& PathManager2::operator<<(std::ostream& out)
     return out;
 }
 
-const Section2& PathManager2::getSectionAtTime(double time)
+Section2& PathManager2::getSectionAtTime(double time)
 {
     double last_t_end = 0.0;
-    for (const Section2& section : sections_) {
+    for (Section2& section : sections_) {
         // Explanation for time_shift in the Section2 class
         // double time_shift = section.getTimeShift();
         double t_end = section.getStartTime() + section.getDuration();  // - time_shift;

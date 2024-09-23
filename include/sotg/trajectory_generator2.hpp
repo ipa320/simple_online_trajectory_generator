@@ -11,6 +11,7 @@
 #include "sotg/point2.hpp"
 #include "sotg/section2.hpp"
 #include "sotg/symbol_group.hpp"
+#include "sotg/result.hpp"
 
 namespace SOTG {
 
@@ -29,7 +30,7 @@ public:
     TrajectoryGenerator2(SymbolGroupMap symbol_groups);
 
     double getDuration();
-    void calcPositionAndVelocity(double time, Point2& pos, Point2& vel, int& id, bool disable_blending = false);
+    void calcPositionAndVelocity(double time, Result& result);
     void resetPath(Path2 path);
 
     std::vector<std::map<std::string, double>>& getDebugInfo() { return debug_info_vec_; };

@@ -3,7 +3,7 @@
 using namespace SOTG;
 using namespace detail;
 
-const Phase& Section2::getPhaseByTime(double time) const
+Phase2& Section2::getPhaseByTime(double time)
 {
     double previous_time = 0.0;
     for (auto& phase : phases_) {
@@ -22,9 +22,9 @@ const Phase& Section2::getPhaseByTime(double time) const
     }
 }
 
-const Phase& Section2::getPhaseByType(PhaseType type) const
+Phase2& Section2::getPhaseByType(PhaseType2 type)
 {
-    auto it = std::find_if(phases_.begin(), phases_.end(), [&](const Phase& phase) { return type == phase.type; });
+    auto it = std::find_if(phases_.begin(), phases_.end(), [&](const Phase2& phase) { return type == phase.type; });
 
     if (it != phases_.end()) {
         return *it;
@@ -34,10 +34,10 @@ const Phase& Section2::getPhaseByType(PhaseType type) const
     }
 }
 
-const Phase& Section2::getPhaseByDistance(double distance) const
+Phase2& Section2::getPhaseByDistance(double distance)
 {
     // if (utility::nearlyZero(distance)) {
-    //     return getPhaseByType(PhaseType::ConstantAcceleration);
+    //     return getPhaseByType(PhaseType2::ConstantAcceleration2);
     // }
 
     double last_distance = 0.0;
