@@ -42,7 +42,7 @@ public:
         Point2 diff(symbol_map_);
         for (auto [group_name, symbols] : symbol_map_) {
             if (symbols.isQuaternion()) {
-                // handle that
+                diff[group_name] = p[group_name].getQuaternionValues().inverse() * (*this)[group_name].getQuaternionValues();
             } else {
                 diff[group_name] = Eigen::VectorXd((*this)[group_name].getCartesianValues() - p[group_name].getCartesianValues());
             }

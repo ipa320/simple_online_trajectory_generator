@@ -30,7 +30,7 @@ namespace detail {
                                          std::vector<double>& total_time_per_dof,
                                          std::vector<double>& total_length_per_dof, std::map<std::string, double>& group_acc, std::map<std::string, double>& group_vel);
 
-        void calcPosAndVelSingleDoFLinear(double section_length, const Phase2& phase,
+        void calcPosAndVelSingleGroup(double section_length, const Phase2& phase,
                                           double phase_distance_to_p_start, double t_phase, double a_max_reduced,
                                           double v_max_reduced, double& pos_magnitude,
                                           double& vel_magnitude) const;

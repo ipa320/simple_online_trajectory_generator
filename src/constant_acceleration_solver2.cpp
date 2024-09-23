@@ -116,11 +116,14 @@ void ConstantAccelerationSolver2::calcDurationAndDistance(Phase2& acc_phase, Pha
     for (const auto [group_name, symbols] : symbol_map_)
     {
         double duration;
+        double distance;
 
         if(symbols.isQuaternion()) {
-            //handle that
+            distance = end_point[group_name].getQuaternionValues().angularDistance(start_point[group_name].getQuaternionValues());
+
         } else {
-            double distance = (end_point[group_name].getCartesianValues() - start_point[group_name].getCartesianValues()).norm();
+            distance = (end_point[group_name].getCartesianValues() - start_point[group_name].getCartesianValues()).norm();
+        }
             distance_per_group.push_back(distance);
 
             double a_max = end_point[group_name].getMaxAcc();
@@ -132,14 +135,13 @@ void ConstantAccelerationSolver2::calcDurationAndDistance(Phase2& acc_phase, Pha
             group_acc[group_name] = a_max;
             duration_per_group.push_back(duration);
             group_names.push_back(group_name);
-        }
     }
 
     int index_slowest_group = findIndexOfMax(duration_per_group);
 
     for (size_t i = 0; i < distance_per_group.size(); ++i)
     {
-        double lambda = 0.0;  // lambda is defined in theses
+        double lambda = 0.0; // Time sync between groups
         if (!utility::nearlyZero(distance_per_group[index_slowest_group])) {
             lambda = distance_per_group[i] / distance_per_group[index_slowest_group];
         }
@@ -228,7 +230,7 @@ Section2 ConstantAccelerationSolver2::calcSection(Point2& p_start_ref, Point2& p
     return section;
 }
 
-void ConstantAccelerationSolver2::calcPosAndVelSingleDoFLinear(double section_dof_length, const Phase2& phase,
+void ConstantAccelerationSolver2::calcPosAndVelSingleGroup(double section_distance, const Phase2& phase,
                                                                double phase_distance_to_p_start, double t_phase,
                                                                double a_max_reduced, double v_max_reduced,
                                                                double& pos, double& vel) const
@@ -244,10 +246,10 @@ void ConstantAccelerationSolver2::calcPosAndVelSingleDoFLinear(double section_do
         p_i = -0.5 * a_max_reduced * std::pow(t_phase, 2) + v_max_reduced * t_phase + phase_distance_to_p_start;
         v_i = -a_max_reduced * t_phase + v_max_reduced;
     }
-    if (utility::nearlyZero(section_dof_length)) {
+    if (utility::nearlyZero(section_distance)) {
         pos = 0;
     } else {
-        pos = p_i / section_dof_length;
+        pos = p_i / section_distance;
     }
     vel = v_i;
 }
@@ -267,21 +269,30 @@ void ConstantAccelerationSolver2::calcPosAndVelSection(double t_section, Section
         double a_max = section.getAccelerations()[group_name];
         double v_max = section.getVelocities()[group_name];
 
+        ValueGroup diff_group = diff[group_name];
+        ValueGroup& loc = result.getLocation()[group_name];
+        ValueGroup& vel = result.getVelocity()[group_name];
+
         if (symbols.isQuaternion()) {
-            // handle that
+            double diff_angle = Eigen::AngleAxisd(diff_group.getQuaternionValues()).angle();
+
+            double pos_magnitude, vel_magnitude;
+            calcPosAndVelSingleGroup(diff_angle, phase, phase.components[group_name].distance_p_start, t_phase,
+                                     a_max, v_max, pos_magnitude, vel_magnitude);
+            loc = p_start[group_name].getQuaternionValues().slerp(pos_magnitude, p_end[group_name].getQuaternionValues());
+            Eigen::Vector3d vel_dir = Eigen::AngleAxisd(diff_group.getQuaternionValues().normalized()).axis();
+            Eigen::Vector3d ang_vel = vel_dir * vel_magnitude;
+            vel = Eigen::Quaterniond(0.0, ang_vel.x(), ang_vel.y(), ang_vel.z());
+
         } else {
-            ValueGroup diff_group = diff[group_name];
+
             double diff_magnitude = diff_group.getCartesianValues().norm();
             ValueGroup dir_group = diff_group * (1.0 / diff_magnitude);
 
             double pos_magnitude, vel_magnitude;
-            calcPosAndVelSingleDoFLinear(diff_magnitude, phase, phase.components[group_name].distance_p_start, t_phase,
+            calcPosAndVelSingleGroup(diff_magnitude, phase, phase.components[group_name].distance_p_start, t_phase,
                                      a_max, v_max, pos_magnitude, vel_magnitude);
-
-            ValueGroup& loc = result.getLocation()[group_name];
-            ValueGroup& vel = result.getVelocity()[group_name];
-            ValueGroup test = diff_group * pos_magnitude;
-            loc = p_start[group_name] + test;
+            loc = p_start[group_name] + diff_group * pos_magnitude;
             vel = dir_group * vel_magnitude;
         }
 

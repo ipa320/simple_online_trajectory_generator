@@ -39,7 +39,7 @@ void PathManager2::resetSections()
 void PathManager2::resetPath(Path2 new_path)
 {
     path_ = new_path;
-    std::cout << "Test";
+
     resetSections();
 }
 

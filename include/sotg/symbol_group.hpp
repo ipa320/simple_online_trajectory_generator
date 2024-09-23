@@ -43,6 +43,7 @@ public:
     bool operator!=(const SymbolGroup& symbol_group) const;
 
     bool isQuaternion() const { return is_quaternion_; }
+    void setQuaternion(bool val) { is_quaternion_ = val; }
 
     friend std::ostream& operator<<(std::ostream& out, const SymbolGroup& sg)
     {
